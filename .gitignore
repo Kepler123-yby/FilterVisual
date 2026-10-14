@@ -1,0 +1,14 @@
+.venv/
+.superpowers/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+data/
+.env
+*.log
