@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from time import perf_counter
+import copy
 import numpy as np
 
 from filtervisual.core.types import Estimate, InstanceRun, RunCancelled
@@ -38,6 +39,12 @@ def run_instance(config,model,data,forecast,evaluation_times,models=None,cancel=
     began=perf_counter()
     filter=None
     try:
+        # A custom model failing to clone is one failed instance, not a failed job.
+        model=copy.deepcopy(model)
+        result.model=model
+        if getattr(model,"_filtervisual_custom",False):
+            from filtervisual.models.custom import check_contract
+            check_contract(model,model._filtervisual_geometry,config.x0,config.p0)
         filter=make_filter(config,model,models=models)
         frames=data.observations
         cursor=0

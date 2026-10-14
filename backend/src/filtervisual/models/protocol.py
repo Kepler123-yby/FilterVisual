@@ -42,6 +42,26 @@ class AngularModel:
         return weighted_mean(points, weights, context.angular_indices)
 
 
+def validate_projection(projection):
+    """Normalize physical outputs; malformed user projections stay local."""
+    from filtervisual.core.types import PhysicalEstimate
+    if not isinstance(projection,PhysicalEstimate):
+        raise ValueError("project must return PhysicalEstimate")
+    for name,shape in (("center_xy",(2,)),("velocity_xyz",(3,)),("armor_positions",(4,3)),
+                       ("reference_yaw",()),("angular_velocity",()),("height_a",()),
+                       ("radius_a",()),("radius_b",()),("height_diff",())):
+        value=getattr(projection,name)
+        if value is None:
+            continue
+        numeric=np.asarray(value,dtype=float)
+        if numeric.shape!=shape:
+            raise ValueError(f"project.{name} must have shape {shape}")
+        if projection.valid and not np.isfinite(numeric).all():
+            raise ValueError(f"project.{name} must be finite when valid=True")
+        setattr(projection,name,float(numeric) if shape==() else numeric.copy())
+    return projection
+
+
 def numerical_jacobian(function, x: np.ndarray, residual=None) -> np.ndarray:
     x = np.asarray(x, dtype=float)
     columns = []

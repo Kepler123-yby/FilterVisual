@@ -44,12 +44,17 @@ class ObservationContext:
     angular_indices: tuple[int, ...] = ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class ObservationFrame:
     t: float
     context: ObservationContext
     values: np.ndarray
     id: str = ""
+
+    def __post_init__(self):
+        values=np.array(self.values,dtype=float,copy=True)
+        values.flags.writeable=False
+        object.__setattr__(self,"values",values)
 
     @classmethod
     def scalar(cls, t: float, value: float) -> ObservationFrame:
@@ -109,6 +114,7 @@ class SimulationData:
     observations: list[ObservationFrame]
     scene_hash: str = ""
     observation_hash: str = ""
+    observation_config_hash: str = ""
 
 
 @dataclass

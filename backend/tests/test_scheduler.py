@@ -55,3 +55,29 @@ def test_high_frequency_does_not_repeat_measurements():
     assert a.error is None
     assert len(a.updates)==6
     assert len(set(a.consumed_observation_ids))==6
+
+
+def test_instances_and_scan_candidates_own_independent_models():
+    from filtervisual.config.schema import ModelDefinition
+    from filtervisual.models.custom import TEMPLATE
+    from filtervisual.tuning.scan import scan_noise
+    c=config(.04)
+    source=TEMPLATE.replace("# Metadata,", "calls=0\n    def R(self,frame):\n        self.calls+=1\n        return super().R(frame)*(1+self.calls)\n\n    # Metadata,")
+    c.models=[ModelDefinition(id="counter",kind="python",source=source)]
+    a=c.instances[0];a.model_id="counter"
+    b=a.model_copy(deep=True);b.id="second";c.instances.append(b)
+    result=run_experiment(c)
+    for first,second in zip(result.instances[0].samples,result.instances[1].samples):
+        np.testing.assert_array_equal(first.x,second.x)
+        np.testing.assert_array_equal(first.P,second.P)
+    scan=scan_noise(c,a.id,"q_scale",[1,1],result.data)
+    baseline=scan["baseline"]["payload"]["instances"][0]["samples"]
+    for candidate in scan["candidates"]:
+        assert candidate["payload"]["instances"][0]["samples"]==baseline
+
+
+def test_observation_values_are_read_only():
+    from filtervisual.core.types import ObservationFrame
+    frame=ObservationFrame.scalar(0.,1.)
+    with pytest.raises(ValueError):
+        frame.values[0]=2.

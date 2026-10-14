@@ -105,7 +105,11 @@ def make_filter(config, model, models=None):
                               tuple(mode_model.angular_indices))
             if mode_signature != signature:
                 raise ValueError(f"IMM mode model {mode.model_id} differs from the instance model's state dimensions and semantics")
-            mode_arguments = dict(arguments, model=copy.deepcopy(mode_model),
+            owned_model=copy.deepcopy(mode_model)
+            if getattr(owned_model,"_filtervisual_custom",False):
+                from filtervisual.models.custom import check_contract
+                check_contract(owned_model,owned_model._filtervisual_geometry,config.x0,config.p0)
+            mode_arguments = dict(arguments, model=owned_model,
                                   q_scale=config.q_scale * mode.q_scale,
                                   r_scale=config.r_scale * mode.r_scale)
             filters.append(UnscentedKalmanFilter(**mode_arguments, parameters=config.ukf)

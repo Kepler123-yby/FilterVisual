@@ -27,7 +27,8 @@ def build_data(config):
     for frame in observations:
         digest.update(str((frame.t,frame.context.plate_ids,frame.id)).encode())
         digest.update(frame.values.tobytes())
-    return SimulationData(truth,observations,scene_hash,digest.hexdigest())
+    return SimulationData(truth,observations,scene_hash,digest.hexdigest(),
+                          config_hash({"observation":config.observation.model_dump(),"seed":config.seed}))
 
 
 def run_experiment(config,cancel=lambda:False,emit=lambda p:None):
