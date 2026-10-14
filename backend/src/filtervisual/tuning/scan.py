@@ -7,13 +7,14 @@ from collections.abc import Sequence
 import numpy as np
 
 from filtervisual.config.schema import ExperimentConfig
-from filtervisual.core.types import RunResult, SimulationData
+from filtervisual.core.types import RunResult, SimulationData, RunProgress, RunCancelled
 from filtervisual.evaluation.report import evaluate_run, json_safe
 
 
 def scan_noise(
     config: ExperimentConfig, instance_id: str, parameter: str,
     multipliers: Sequence[float], data: SimulationData,
+    *, cancel=lambda: False, emit=lambda progress: None,
 ) -> dict:
     if parameter not in ("q_scale", "r_scale"):
         raise ValueError("noise scan parameter must be q_scale or r_scale")
@@ -46,19 +47,25 @@ def scan_noise(
         times = np.r_[times, duration]
     results = []
     # Always include a real baseline, even if the requested list omits multiplier 1.
-    for multiplier in [1.] + list(multipliers):
+    total=1+len(multipliers)
+    for index,multiplier in enumerate([1.] + list(multipliers)):
+        if cancel():
+            raise RunCancelled()
         candidate = config.model_copy(deep=True)
         candidate.instances = [original.model_copy(deep=True)]
         candidate.instances[0].enabled = True
         setattr(candidate.instances[0], parameter, baseline_value * float(multiplier))
         model = models[original.model_id]
-        run = run_instance(candidate.instances[0], model, data, candidate.forecast, times, models=models)
+        run = run_instance(candidate.instances[0], model, data, candidate.forecast, times, models=models,
+                           cancel=cancel,emit=lambda fraction: emit(RunProgress(
+                               "noise_scan",index,total,int((index+fraction)*1000),total*1000)))
         evaluated = evaluate_run(RunResult(candidate, data, [run], times))
         results.append(dict(
             multiplier=float(multiplier), value=baseline_value * float(multiplier),
             parameter_diff={parameter: dict(before=baseline_value, after=baseline_value * float(multiplier))},
             config=json_safe(candidate), payload=evaluated.payload, report=evaluated.payload["report"],
         ))
+        emit(RunProgress("noise_scan",index+1,total,(index+1)*1000,total*1000))
     baseline, candidates = results[0], results[1:]
     summary = [
         f"为 {original.name} 比较 {parameter} 的 {len(candidates)} 个倍率，"

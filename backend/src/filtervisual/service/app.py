@@ -93,7 +93,8 @@ def create_app(data_dir: Path | str, *, timeout_s: float = 120., web_dir: Path |
 
     @app.get("/api/health")
     def health() -> dict:
-        return {"status": "ok", "version": "0.1.0", "worker_count": 1, "timeout_s": manager.timeout_s}
+        return {"status": "ok", "version": "0.1.0", "worker_count": 1, "timeout_s": manager.timeout_s,
+                "timeout_policy": "single_simulation_budget; batch_total_scales_with_trial_count"}
 
     @app.get("/api/default-config", response_model=ExperimentConfig)
     def default_config():

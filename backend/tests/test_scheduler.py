@@ -81,3 +81,22 @@ def test_observation_values_are_read_only():
     frame=ObservationFrame.scalar(0.,1.)
     with pytest.raises(ValueError):
         frame.values[0]=2.
+
+
+def test_disabled_and_unused_python_models_are_not_executed(monkeypatch):
+    from filtervisual.config.schema import ModelDefinition
+    import filtervisual.simulation.runner as runner
+    c=config(.02)
+    c.models.append(ModelDefinition(id="unused",kind="python",source="raise RuntimeError('unused source must not execute')"))
+    disabled=c.instances[0].model_copy(deep=True)
+    disabled.id="disabled";disabled.enabled=False;disabled.model_id="unused"
+    c.instances.append(disabled)
+    original=runner.make_model
+    called=[]
+    def tracked(definition,geometry):
+        called.append(definition.id)
+        return original(definition,geometry)
+    monkeypatch.setattr(runner,"make_model",tracked)
+    result=runner.run_experiment(c)
+    assert called==["rm-cv"]
+    assert len(result.instances)==1 and result.instances[0].error is None

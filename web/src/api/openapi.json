@@ -1,0 +1,1596 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FilterVisual local experiment API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/default-config": {
+      "get": {
+        "summary": "Default Config",
+        "operationId": "default_config_api_default_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentConfig"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_api_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunStatus"
+                  },
+                  "type": "array",
+                  "title": "Response History Api Runs Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Run",
+        "operationId": "create_run_api_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}": {
+      "get": {
+        "summary": "Run Status",
+        "operationId": "run_status_api_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/cancel": {
+      "post": {
+        "summary": "Cancel Run",
+        "operationId": "cancel_run_api_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/result": {
+      "get": {
+        "summary": "Result",
+        "operationId": "result_api_runs__run_id__result_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Result Api Runs  Run Id  Result Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/report": {
+      "get": {
+        "summary": "Report",
+        "operationId": "report_api_runs__run_id__report_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Report Api Runs  Run Id  Report Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/config": {
+      "get": {
+        "summary": "Run Config",
+        "operationId": "run_config_api_runs__run_id__config_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentConfig"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/series": {
+      "get": {
+        "summary": "Series",
+        "operationId": "series_api_runs__run_id__series_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "instance",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instance"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "samples",
+                "updates",
+                "forecasts",
+                "truth",
+                "observations"
+              ],
+              "type": "string",
+              "default": "samples",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "lead",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lead"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 2000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Series Api Runs  Run Id  Series Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/export": {
+      "get": {
+        "summary": "Export",
+        "operationId": "export_api_runs__run_id__export_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "json",
+                "csv",
+                "markdown",
+                "npz",
+                "zip"
+              ],
+              "type": "string",
+              "default": "json",
+              "title": "Format"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/scan": {
+      "post": {
+        "summary": "Scan",
+        "operationId": "scan_api_runs__run_id__scan_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/runs/{run_id}/monte-carlo": {
+      "post": {
+        "summary": "Monte Carlo",
+        "operationId": "monte_carlo_api_runs__run_id__monte_carlo_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonteCarloRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/template": {
+      "get": {
+        "summary": "Model Template",
+        "operationId": "model_template_api_models_template_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelTemplateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/validate": {
+      "post": {
+        "summary": "Model Validate",
+        "operationId": "model_validate_api_models_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelValidationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelValidationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EvaluationConfig": {
+        "properties": {
+          "frequency_hz": {
+            "type": "number",
+            "title": "Frequency Hz",
+            "default": 50.0
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 0.95
+          },
+          "monte_carlo_trials": {
+            "type": "integer",
+            "title": "Monte Carlo Trials",
+            "default": 20
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvaluationConfig"
+      },
+      "ExperimentConfig": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "四装甲板平移与自旋"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "scene": {
+            "$ref": "#/components/schemas/SceneConfig"
+          },
+          "observation": {
+            "$ref": "#/components/schemas/ObservationConfig"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelDefinition"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "instances": {
+            "items": {
+              "$ref": "#/components/schemas/FilterConfig"
+            },
+            "type": "array",
+            "title": "Instances"
+          },
+          "forecast": {
+            "$ref": "#/components/schemas/ForecastConfig"
+          },
+          "evaluation": {
+            "$ref": "#/components/schemas/EvaluationConfig"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExperimentConfig"
+      },
+      "FilterConfig": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ekf",
+              "ukf",
+              "imm"
+            ],
+            "title": "Kind",
+            "default": "ekf"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "model_id": {
+            "type": "string",
+            "title": "Model Id",
+            "default": "rm-cv"
+          },
+          "frequency_hz": {
+            "type": "number",
+            "title": "Frequency Hz",
+            "default": 50.0
+          },
+          "x0": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "X0"
+          },
+          "p0": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "P0"
+          },
+          "q_scale": {
+            "type": "number",
+            "title": "Q Scale",
+            "default": 1.0
+          },
+          "r_scale": {
+            "type": "number",
+            "title": "R Scale",
+            "default": 1.0
+          },
+          "ukf": {
+            "$ref": "#/components/schemas/UKFParameters"
+          },
+          "imm": {
+            "$ref": "#/components/schemas/IMMConfig"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "FilterConfig"
+      },
+      "ForecastConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "leads_s": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Leads S"
+          },
+          "max_step_s": {
+            "type": "number",
+            "title": "Max Step S",
+            "default": 0.005
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ForecastConfig"
+      },
+      "GeometryConfig": {
+        "properties": {
+          "radius_a": {
+            "type": "number",
+            "title": "Radius A",
+            "default": 0.25
+          },
+          "radius_b": {
+            "type": "number",
+            "title": "Radius B",
+            "default": 0.35
+          },
+          "height_a": {
+            "type": "number",
+            "title": "Height A",
+            "default": 0.2
+          },
+          "height_diff": {
+            "type": "number",
+            "title": "Height Diff",
+            "default": 0.08
+          },
+          "reference_id": {
+            "type": "integer",
+            "title": "Reference Id",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GeometryConfig"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IMMConfig": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/IMMModeConfig"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "probabilities": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Probabilities"
+          },
+          "generator": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Generator"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IMMConfig"
+      },
+      "IMMModeConfig": {
+        "properties": {
+          "model_id": {
+            "type": "string",
+            "title": "Model Id",
+            "default": "rm-cv"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ekf",
+              "ukf"
+            ],
+            "title": "Kind",
+            "default": "ekf"
+          },
+          "q_scale": {
+            "type": "number",
+            "title": "Q Scale",
+            "default": 1.0
+          },
+          "r_scale": {
+            "type": "number",
+            "title": "R Scale",
+            "default": 1.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IMMModeConfig"
+      },
+      "ModelDefinition": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "default": "rm-cv"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "python"
+            ],
+            "title": "Kind",
+            "default": "builtin"
+          },
+          "builtin_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Builtin Name",
+            "default": "rm_cv"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ModelDefinition"
+      },
+      "ModelTemplateResponse": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "ModelTemplateResponse"
+      },
+      "ModelValidationIssue": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ModelValidationIssue"
+      },
+      "ModelValidationRequest": {
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/ModelDefinition"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryConfig"
+          },
+          "x0": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X0"
+          },
+          "p0": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "definition"
+        ],
+        "title": "ModelValidationRequest"
+      },
+      "ModelValidationResponse": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ModelValidationIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid",
+          "issues"
+        ],
+        "title": "ModelValidationResponse"
+      },
+      "MonteCarloRequest": {
+        "properties": {
+          "trials": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Trials",
+            "default": 20
+          },
+          "seeds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 200,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seeds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MonteCarloRequest"
+      },
+      "ObservationConfig": {
+        "properties": {
+          "frequency_hz": {
+            "type": "number",
+            "title": "Frequency Hz",
+            "default": 100.0
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "nearest_visible",
+              "all"
+            ],
+            "title": "Mode",
+            "default": "nearest_visible"
+          },
+          "plate_id": {
+            "type": "integer",
+            "title": "Plate Id",
+            "default": 0
+          },
+          "viewpoint_xyz": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Viewpoint Xyz"
+          },
+          "std_xyz": {
+            "type": "number",
+            "title": "Std Xyz",
+            "default": 0.01
+          },
+          "std_yaw": {
+            "type": "number",
+            "title": "Std Yaw",
+            "default": 0.02
+          },
+          "covariance": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covariance"
+          },
+          "dropout_probability": {
+            "type": "number",
+            "title": "Dropout Probability",
+            "default": 0.0
+          },
+          "outlier_probability": {
+            "type": "number",
+            "title": "Outlier Probability",
+            "default": 0.0
+          },
+          "outlier_scale": {
+            "type": "number",
+            "title": "Outlier Scale",
+            "default": 10.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ObservationConfig"
+      },
+      "RotationConfig": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "angle",
+              "angular_velocity"
+            ],
+            "title": "Mode",
+            "default": "angular_velocity"
+          },
+          "initial_yaw": {
+            "type": "number",
+            "title": "Initial Yaw",
+            "default": 0.0
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/SineTerm"
+            },
+            "type": "array",
+            "title": "Terms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RotationConfig"
+      },
+      "RunStatus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ],
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "default": 0.0
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage",
+            "default": "queued"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "simulation",
+              "noise_scan",
+              "monte_carlo"
+            ],
+            "title": "Kind",
+            "default": "simulation"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "timeout_s": {
+            "type": "number",
+            "title": "Timeout S",
+            "default": 120.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "created_at"
+        ],
+        "title": "RunStatus"
+      },
+      "ScanRequest": {
+        "properties": {
+          "instance_id": {
+            "type": "string",
+            "title": "Instance Id"
+          },
+          "parameter": {
+            "type": "string",
+            "enum": [
+              "q_scale",
+              "r_scale"
+            ],
+            "title": "Parameter"
+          },
+          "multipliers": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Multipliers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instance_id",
+          "parameter"
+        ],
+        "title": "ScanRequest"
+      },
+      "SceneConfig": {
+        "properties": {
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S",
+            "default": 12.0
+          },
+          "simulation_dt": {
+            "type": "number",
+            "title": "Simulation Dt",
+            "default": 0.002
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeometryConfig"
+          },
+          "translation": {
+            "$ref": "#/components/schemas/TranslationConfig"
+          },
+          "rotation": {
+            "$ref": "#/components/schemas/RotationConfig"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SceneConfig"
+      },
+      "SineTerm": {
+        "properties": {
+          "amplitude": {
+            "type": "number",
+            "title": "Amplitude",
+            "default": 1.0
+          },
+          "frequency_rad_s": {
+            "type": "number",
+            "title": "Frequency Rad S",
+            "default": 1.2
+          },
+          "phase_rad": {
+            "type": "number",
+            "title": "Phase Rad",
+            "default": 0.0
+          },
+          "offset": {
+            "type": "number",
+            "title": "Offset",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SineTerm"
+      },
+      "TranslationConfig": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "constant",
+              "waypoints",
+              "random_smooth"
+            ],
+            "title": "Mode",
+            "default": "random_smooth"
+          },
+          "initial_xy": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Initial Xy"
+          },
+          "velocity_xy": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Velocity Xy"
+          },
+          "speed_min": {
+            "type": "number",
+            "title": "Speed Min",
+            "default": 0.5
+          },
+          "speed_max": {
+            "type": "number",
+            "title": "Speed Max",
+            "default": 2.0
+          },
+          "node_interval_s": {
+            "type": "number",
+            "title": "Node Interval S",
+            "default": 1.0
+          },
+          "waypoints": {
+            "items": {
+              "$ref": "#/components/schemas/Waypoint"
+            },
+            "type": "array",
+            "title": "Waypoints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TranslationConfig"
+      },
+      "UKFParameters": {
+        "properties": {
+          "alpha": {
+            "type": "number",
+            "title": "Alpha",
+            "default": 0.5
+          },
+          "beta": {
+            "type": "number",
+            "title": "Beta",
+            "default": 2.0
+          },
+          "kappa": {
+            "type": "number",
+            "title": "Kappa",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UKFParameters"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Waypoint": {
+        "properties": {
+          "time_s": {
+            "type": "number",
+            "title": "Time S"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          },
+          "heading_rad": {
+            "type": "number",
+            "title": "Heading Rad"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_s",
+          "speed",
+          "heading_rad"
+        ],
+        "title": "Waypoint"
+      }
+    }
+  }
+}

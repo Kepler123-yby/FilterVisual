@@ -105,3 +105,17 @@ def test_scan_imm_resolves_distinct_mode_model_ids():
     out = scan_noise(result.config, "test", "q_scale", [1], data)
     assert out["baseline"]["report"]["instances"][0]["status"] == "completed"
     assert out["candidates"][0]["payload"]["instances"][0]["samples"][0]["mode_probabilities"] is not None
+
+
+def test_scan_progress_and_cancellation():
+    import pytest
+    from filtervisual.core.types import RunCancelled
+    from filtervisual.simulation.runner import build_data
+    from filtervisual.tuning.scan import scan_noise
+    result=fake_result(count=3,duration=.04)
+    result.config.forecast.enabled=False
+    events=[]
+    scan_noise(result.config,"test","q_scale",[1],build_data(result.config),emit=events.append)
+    assert events[-1].completed_events==events[-1].total_events==2000
+    with pytest.raises(RunCancelled):
+        scan_noise(result.config,"test","q_scale",[1],build_data(result.config),cancel=lambda:True)

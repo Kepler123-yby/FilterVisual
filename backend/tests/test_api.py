@@ -9,6 +9,8 @@ import pytest
 
 from filtervisual.config.schema import ModelDefinition, default_experiment
 from filtervisual.service.app import create_app
+from filtervisual.service.jobs import JobManager
+from filtervisual.storage.store import RunStore
 
 
 def small_config():
@@ -118,6 +120,7 @@ def test_scan_and_monte_carlo_are_children_and_preserve_baseline(tmp_path):
         assert response.status_code == 202
         child = response.json()
         assert child["parent_id"] == run_id and child["kind"] == "noise_scan"
+        assert child["timeout_s"] == 360  # One baseline plus two candidates.
         assert poll(client, child["id"])["status"] == "completed"
         result = client.get(f"/api/runs/{child['id']}/result").json()
         assert len(result["candidates"]) == 2 and result["observation_hash"]
@@ -126,6 +129,7 @@ def test_scan_and_monte_carlo_are_children_and_preserve_baseline(tmp_path):
         response = client.post(f"/api/runs/{run_id}/monte-carlo", json={"trials": 2, "seeds": [42, 43]})
         assert response.status_code == 202
         child = response.json()
+        assert child["timeout_s"] == 240
         assert poll(client, child["id"])["status"] == "completed"
         result = client.get(f"/api/runs/{child['id']}/result").json()
         assert result["trials"] == 2 and result["groups"]
@@ -162,10 +166,22 @@ def test_worker_timeout_is_persisted_and_next_run_can_start(tmp_path):
         run_id = submit(client, config)
         status = poll(client, run_id)
         assert status["status"] == "timed_out" and "0.2" in status["error"]
+        assert status["timeout_s"] == .2 and "总限时" in status["error"]
         assert client.get(f"/api/runs/{run_id}/result").status_code == 409
     with TestClient(create_app(tmp_path, timeout_s=10)) as client:
         assert client.get(f"/api/runs/{run_id}").json()["status"] == "timed_out"
         assert poll(client, submit(client, small_config()))["status"] == "completed"
+
+
+def test_batch_budgets_cover_each_real_trial_including_scan_baseline(tmp_path):
+    manager = JobManager(RunStore(tmp_path), timeout_s=.5)
+    assert manager.budget_for("simulation") == .5
+    assert manager.budget_for("noise_scan", {"multipliers": [.1, .3, 1., 3., 10.]}) == 3
+    assert manager.budget_for("monte_carlo", {"seeds": list(range(20))}) == 10
+    with pytest.raises(ValueError, match="positive"):
+        manager.budget_for("monte_carlo", {"seeds": []})
+    # Scaling never changes the base policy used by a normal single run.
+    assert manager.timeout_s == .5 and manager.budget_for("simulation") == .5
 
 
 def test_spa_is_optional_and_does_not_hide_unknown_api(tmp_path):

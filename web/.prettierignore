@@ -1,0 +1,5 @@
+src/api/generated.d.ts
+src/api/openapi.json
+node_modules
+dist
+test-results

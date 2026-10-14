@@ -12,3 +12,4 @@ web/playwright-report/
 data/
 .env
 *.log
+*.tsbuildinfo

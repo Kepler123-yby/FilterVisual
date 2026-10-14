@@ -39,14 +39,20 @@ def run_experiment(config,cancel=lambda:False,emit=lambda p:None):
     emit(RunProgress("truth"))
     data=build_data(config)
     times=time_grid(config.scene.duration_s,config.evaluation.frequency_hz)
+    enabled=[x for x in config.instances if x.enabled]
+    required_ids={x.model_id for x in enabled}
+    for instance in enabled:
+        if instance.kind=="imm":
+            required_ids.update(mode.model_id for mode in instance.imm.models)
     models={};model_errors={}
     for definition in config.models:
+        if definition.id not in required_ids:
+            continue
         try:
             models[definition.id]=make_model(definition,config.scene.geometry)
         except Exception as e:
             model_errors[definition.id]=str(e)
     instances=[]
-    enabled=[x for x in config.instances if x.enabled]
     for i,instance in enumerate(enabled):
         if cancel():
             raise RunCancelled()

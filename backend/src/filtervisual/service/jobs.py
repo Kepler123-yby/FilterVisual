@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import deque
+from copy import deepcopy
 from datetime import datetime, timezone
 import multiprocessing as mp
 import math
@@ -34,6 +35,7 @@ class RunStatus(BaseModel):
     finished_at: str | None = None
     kind: Literal["simulation", "noise_scan", "monte_carlo"] = "simulation"
     parent_id: str | None = None
+    timeout_s: float = 120.
 
 
 def _now() -> str:
@@ -75,7 +77,8 @@ def _worker(data_dir: str, run_id: str, config_dict: dict, kind: str, request: d
             data = build_data(config)
             if data.observation_hash != request["observation_hash"]:
                 raise ValueError("baseline observation hash differs; candidates cannot reuse different observations")
-            payload = scan_noise(config, request["instance_id"], request["parameter"], request["multipliers"], data)
+            payload = scan_noise(config, request["instance_id"], request["parameter"], request["multipliers"], data,
+                                 cancel=cancel.is_set, emit=emit)
             if cancel.is_set():
                 raise RunCancelled()
             events.put(("progress", .98, "saving"))
@@ -127,21 +130,38 @@ class JobManager:
                         self._change(status.id, status="completed", stage="completed", progress=1.,
                                      error=None, finished_at=status.finished_at or _now())
 
+    def budget_for(self, kind: str = "simulation", request: dict | None = None) -> float:
+        """A batch receives the sum of its individual simulation budgets."""
+        request = request or {}
+        if kind == "simulation":
+            count = 1
+        elif kind == "noise_scan":
+            count = 1 + len(request.get("multipliers", []))  # Baseline is a real trial.
+        elif kind == "monte_carlo":
+            count = len(request.get("seeds", []))
+        else:
+            raise ValueError("unknown job type")
+        budget = self.timeout_s * count
+        if not math.isfinite(budget) or budget <= 0:
+            raise ValueError("job requires a finite positive total timeout budget")
+        return budget
+
     def submit(self, config: ExperimentConfig, kind: str = "simulation", parent_id: str | None = None,
                request: dict | None = None) -> str:
         # Freeze before taking queue ownership; subsequent draft edits cannot
         # alter a submitted run, including mutable nested model parameters.
         snapshot = ExperimentConfig.model_validate(config.model_dump(mode="json"))
+        request = deepcopy(request or {})
         run_id = str(uuid4())
         suffix = {"simulation": "", "noise_scan": " · 噪声候选比较", "monte_carlo": " · Monte Carlo"}[kind]
         status = RunStatus(id=run_id, name=snapshot.name + suffix, status="queued", stage="queued", created_at=_now(),
-                           kind=kind, parent_id=parent_id)
+                           kind=kind, parent_id=parent_id, timeout_s=self.budget_for(kind, request))
         with self._condition:
             if self._closing:
                 raise RuntimeError("job manager is shutting down")
             self.store.create(run_id, snapshot, status.model_dump(), kind, parent_id, request)
             self._records[run_id] = status
-            self._requests[run_id] = (snapshot.model_dump(mode="json"), kind, request or {})
+            self._requests[run_id] = (snapshot.model_dump(mode="json"), kind, request)
             self._pending.append(run_id)
             if self._thread is None:
                 self._thread = threading.Thread(target=self._loop, name="filtervisual-jobs", daemon=True)
@@ -198,6 +218,7 @@ class JobManager:
                                           config, kind, request, events, cancel), daemon=True)
                 self._active = (run_id, process, cancel)
                 self._change(run_id, status="running", stage="starting", started_at=_now())
+                budget = self._records[run_id].timeout_s
                 start = time.monotonic()
             terminal = None
             error = None
@@ -210,9 +231,10 @@ class JobManager:
                         cancel.set()
                         terminal = "cancelled"
                         break
-                    if time.monotonic() - start > self.timeout_s:
+                    if time.monotonic() - start > budget:
                         terminal = "timed_out"
-                        error = f"作业超过 {self.timeout_s:g} 秒，已终止；请缩短场景、减少预测分支或提高超时限制"
+                        error = (f"作业超过总限时 {budget:g} 秒（单次仿真基础预算 {self.timeout_s:g} 秒），已终止；"
+                                 "请缩短场景、减少预测分支或提高基础超时限制")
                         break
                     try:
                         message = events.get(timeout=.05)
