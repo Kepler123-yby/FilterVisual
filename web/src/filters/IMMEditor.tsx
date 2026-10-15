@@ -3,7 +3,15 @@ import type { FilterConfig, Geometry } from "../api/types";
 import { Field, NumberField, Toggle } from "../app/components";
 import { MatrixEditor } from "./MatrixEditor";
 import { JsonField, TransitionPreview } from "./ParameterEditor";
+import {
+  applyFormulaSpec,
+  ADVANCED_FORMULA_PREFIX,
+  createFormulaPreset,
+  readFormulaSpec,
+  recoverFormulaSpec,
+} from "./formulaModel";
 const ModelEditor = lazy(() => import("./ModelEditor"));
+const FormulaModelEditor = lazy(() => import("./FormulaModelEditor"));
 export default function IMMEditor({
   filter,
   geometry,
@@ -82,6 +90,8 @@ export default function IMMEditor({
       </div>
       {imm.modes.map((m, i) => {
         const own = m.model ?? filter.model;
+        const modeFilter = { ...filter, model: own };
+        const formula = readFormulaSpec(modeFilter);
         return (
           <div className="imm-mode" key={i}>
             <Field label={`模式 ${i + 1} 算法`}>
@@ -115,8 +125,19 @@ export default function IMMEditor({
               onChange={(use_parent_model) =>
                 modePatch(i, {
                   use_parent_model,
-                  model: m.model ?? structuredClone(filter.model),
-                  R: m.R ?? structuredClone(filter.R),
+                  model: use_parent_model
+                    ? (m.model ?? structuredClone(filter.model))
+                    : structuredClone(filter.model),
+                  R: use_parent_model
+                    ? (m.R ?? structuredClone(filter.R))
+                    : structuredClone(filter.R),
+                  ...(!use_parent_model
+                    ? {
+                        q_translation: filter.q_translation,
+                        q_rotation: filter.q_rotation,
+                        q_geometry: filter.q_geometry,
+                      }
+                    : {}),
                 })
               }
             />
@@ -124,18 +145,33 @@ export default function IMMEditor({
               <>
                 <Field label={`模式 ${i + 1} 模型来源`}>
                   <select
-                    value={own.kind}
-                    onChange={(e) =>
-                      modePatch(i, {
-                        model: {
-                          ...own,
-                          kind: e.target.value as typeof own.kind,
-                        },
-                      })
-                    }
+                    value={formula ? "formula" : own.kind}
+                    onChange={(e) => {
+                      const model =
+                        e.target.value === "formula"
+                          ? applyFormulaSpec(
+                              modeFilter,
+                              recoverFormulaSpec(modeFilter) ??
+                                readFormulaSpec(filter) ??
+                                createFormulaPreset("armor", geometry),
+                            ).model
+                          : {
+                              ...own,
+                              kind: e.target.value as "builtin" | "custom",
+                              params:
+                                e.target.value === "builtin" ? {} : own.params,
+                              source: formula
+                                ? `${ADVANCED_FORMULA_PREFIX}${own.source}`
+                                : own.source,
+                            };
+                      modePatch(i, { model });
+                    }}
                   >
-                    <option value="builtin">独立四板 CV</option>
-                    <option value="custom">独立 Python 方程</option>
+                    <option value="builtin" disabled={filter.x0.length !== 11}>
+                      独立四板 CV（11 维）
+                    </option>
+                    <option value="formula">独立表单模型</option>
+                    <option value="custom">独立 Python 方程（高级）</option>
                   </select>
                 </Field>
                 {own.kind === "builtin" ? (
@@ -169,6 +205,32 @@ export default function IMMEditor({
                       onChange={(R) => modePatch(i, { R })}
                     />
                   </>
+                ) : formula ? (
+                  <Suspense fallback={<p>正在加载模式模型表单…</p>}>
+                    <p className="help">
+                      各模式共享初值与
+                      P₀。状态语义须与父模型一致；修改初值会同步到整个 IMM。
+                    </p>
+                    <FormulaModelEditor
+                      filter={modeFilter}
+                      geometry={geometry}
+                      onChange={(next) =>
+                        onChange({
+                          ...filter,
+                          x0: next.x0,
+                          P0: next.P0,
+                          imm: {
+                            ...imm,
+                            modes: imm.modes.map((mode, index) =>
+                              index === i
+                                ? { ...mode, model: next.model }
+                                : mode,
+                            ),
+                          },
+                        })
+                      }
+                    />
+                  </Suspense>
                 ) : (
                   <Suspense fallback={<p>正在加载模式模型编辑器…</p>}>
                     <ModelEditor

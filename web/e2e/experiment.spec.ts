@@ -133,7 +133,7 @@ test("validates the Python template, edits f and runs the saved source", async (
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(config)),
     });
-  await page.getByText("预测模型与 Python 方程", { exact: true }).click();
+  await page.getByText("预测模型与方程", { exact: true }).click();
   await page.getByLabel("模型来源").selectOption("custom");
   await page.getByRole("button", { name: "验证方程与维数" }).click();
   await expect(page.getByText(/验证通过/)).toBeVisible();

@@ -64,8 +64,9 @@ export default function ModelEditor({
   return (
     <div className="model-editor">
       <p className="help">
-        入口 build_model(params,
-        geometry)。源代码随实验保存；使用可信的本地代码。
+        高级 Python 方式：build_model(params, geometry)
+        位于下方完整源码中，默认模板在末尾。
+        此处修改随当前模型保存，不会改动磁盘上的示例文件。使用可信的本地代码。
       </p>
       <div className="code-editor">
         <Editor
@@ -109,7 +110,10 @@ export default function ModelEditor({
             });
         }}
       />
-      <button onClick={() => void validate()} disabled={busy || !filter.model.source}>
+      <button
+        onClick={() => void validate()}
+        disabled={busy || !filter.model.source}
+      >
         {busy ? "检查模型中…" : "验证方程与维数"}
       </button>
       {validation && (

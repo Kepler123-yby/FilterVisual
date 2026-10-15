@@ -1,4 +1,9 @@
 import type { ExperimentConfig } from "../api/types";
+import {
+  createFormulaPreset,
+  getFormulaIssues,
+  readFormulaSpec,
+} from "../filters/formulaModel";
 export function validateDraft(draft: ExperimentConfig): string[] {
   const errors: string[] = [];
   if (draft.duration_s <= 0 || draft.duration_s > 120)
@@ -15,6 +20,58 @@ export function validateDraft(draft: ExperimentConfig): string[] {
   )
     errors.push("预测提前量需要大于 0");
   for (const f of draft.filters) {
+    const formula = readFormulaSpec(f);
+    if (formula) {
+      errors.push(
+        ...getFormulaIssues(formula).map((issue) => `${f.name}：${issue}`),
+      );
+      if (formula.states.length !== f.x0.length)
+        errors.push(`${f.name}：状态表与初值维数不一致`);
+    }
+    if (f.kind === "imm")
+      for (const [index, mode] of f.imm.modes.entries()) {
+        if (mode.use_parent_model !== false || !mode.model) continue;
+        const modeSpec = readFormulaSpec({ ...f, model: mode.model });
+        if (
+          mode.model.kind === "builtin" &&
+          (f.x0.length !== 11 ||
+            (formula &&
+              JSON.stringify(
+                formula.states.map((s) => [s.name, s.unit, s.angular]),
+              ) !==
+                JSON.stringify(
+                  createFormulaPreset("armor", draft.geometry).states.map(
+                    (s) => [s.name, s.unit, s.angular],
+                  ),
+                )))
+        )
+          errors.push(
+            `${f.name} 模式 ${index + 1}：内置四板模型的 11 维状态须与父模型一致`,
+          );
+        if (modeSpec) {
+          errors.push(
+            ...getFormulaIssues(modeSpec).map(
+              (issue) => `${f.name} 模式 ${index + 1}：${issue}`,
+            ),
+          );
+          if (modeSpec.states.length !== f.x0.length)
+            errors.push(
+              `${f.name} 模式 ${index + 1}：状态表与共享初值维数不一致`,
+            );
+          if (
+            formula &&
+            JSON.stringify(
+              formula.states.map((s) => [s.name, s.unit, s.angular]),
+            ) !==
+              JSON.stringify(
+                modeSpec.states.map((s) => [s.name, s.unit, s.angular]),
+              )
+          )
+            errors.push(
+              `${f.name} 模式 ${index + 1}：状态名称、顺序、单位和角度标记须与父模型一致`,
+            );
+        }
+      }
     if (!(f.frequency_hz > 0)) errors.push(`${f.name}：更新频率需要大于 0`);
     if (f.P0.length !== f.x0.length)
       errors.push(`${f.name}：P₀ 与 x₀ 维数不一致`);

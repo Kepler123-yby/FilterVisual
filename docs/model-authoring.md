@@ -1,5 +1,9 @@
 # 自定义状态、观测与滤波方程
 
+日常修改优先使用 [无需阅读源码的网页表单](model-form.md)：可以编辑状态、初值、f/h 公式和 Q/R，F/H 自动计算。本文保留为高级 Python 接口说明。
+
+本文提到的 `build_model` 不是某个全局文件里的唯一函数：11 维示例位于 [custom_cv.py](../examples/models/custom_cv.py) 末尾，四维示例位于 [reduced_xy.py](../examples/models/reduced_xy.py) 末尾，六维示例位于 [custom_xy_bias.py](../examples/models/custom_xy_bias.py) 末尾；网页默认模板则位于 [custom.py](../backend/src/filtervisual/models/custom.py) 的 `TEMPLATE` 字符串内。网页编辑器保存的是完整源码副本，修改示例文件不会自动更新它。
+
 本文说明如何修改状态向量、实际观测、Q/R、状态转移 f/F 和观测映射 h/H。先用 [四维中心 CV 配置](../examples/custom-xy.json) 跑通，再参考 [六维偏置模型](../examples/models/custom_xy_bias.py) 增加状态。
 
 保留全部四板状态时，可从 [11 维自定义模板](../examples/models/custom_cv.py) 开始；它继承的完整 f/F/h/H/Q/R 实现在 [rm_cv.py](../backend/src/filtervisual/models/rm_cv.py)。
@@ -10,7 +14,7 @@
 
 | 要修改的内容 | 界面入口 / Python 方法 | 导出配置中的字段 |
 |---|---|---|
-| 状态名称、顺序、维数、单位 | “预测模型与 Python 方程” → “自定义 Python 模型”；`state_names`、`units`、`angular_indices` | `models[].source` |
+| 状态名称、顺序、维数、单位 | “预测模型与方程” → “自定义 Python 模型（高级）”；`state_names`、`units`、`angular_indices` | `models[].source` |
 | 初始状态、初始不确定性 | “初始状态 x₀ / P₀” | `instances[].x0`、`instances[].p0` |
 | 状态如何随时间变化 | `f(x, dt, t0)`、`jacobian_f(x, dt, t0)` | `models[].source` |
 | 状态如何预测观测 | `h(x, context)`、`jacobian_h(x, context)` | `models[].source` |
@@ -24,7 +28,7 @@
 
 建议按以下顺序操作：
 
-1. 复制一个 EKF 实例，展开“预测模型与 Python 方程”，切换为“自定义 Python 模型”。自动模板是 11 维模型。
+1. 复制一个 EKF 实例，展开“预测模型与方程”，切换为“自定义 Python 模型（高级）”。自动模板是 11 维模型。
 2. 把完整示例 Python 文件粘贴到编辑器，填写对应“模型参数（JSON）”。修改仓库 `.py` 文件不会自动更新已保存草稿的源码。
 3. 按源码顺序填写 x₀，把 P₀ 改成相同维数的完整矩阵。修改 x₀ 长度后，仍需检查 P₀ 每一行的长度和数值。
 4. Q / R 倍率先设为 1，确认场景满足模型假设，再点击“验证方程与维数”。

@@ -55,4 +55,6 @@ npm --prefix web run test:e2e
 
 修改状态向量、观测、Q/R、f/F、h/H 的操作和矩阵示例见 [自定义模型详解](docs/model-authoring.md)。可直接导入 [四维中心 CV](examples/custom-xy.json) 或 [六维测量偏置示例](examples/custom-xy-bias.json)，再按说明逐项修改。
 
+不想阅读源码时，在网页“模型来源”选择“表单配置模型（无需 Python）”。按 [表单操作说明](docs/model-form.md) 编辑状态、初值、数学公式和 Q/R；F/H 自动计算，配置可保存、导入和复现。
+
 首版使用已知板 ID 的合成 XYZ/yaw 观测，不包含相机检测/PnP/ROS。自定义 Python 源码在限时子进程中运行，但不是权限沙箱。NIS/NEES 的卡方界是统计参考，IMM 标为高斯混合近似；时间序列的相关样本不作为独立试验通过率。

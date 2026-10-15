@@ -3,7 +3,15 @@ import type { FilterConfig, Geometry } from "../api/types";
 import { Field, NumberField } from "../app/components";
 import { MatrixEditor } from "./MatrixEditor";
 import IMMEditor from "./IMMEditor";
+import {
+  applyFormulaSpec,
+  ADVANCED_FORMULA_PREFIX,
+  createFormulaPreset,
+  readFormulaSpec,
+  recoverFormulaSpec,
+} from "./formulaModel";
 const ModelEditor = lazy(() => import("./ModelEditor"));
+const FormulaModelEditor = lazy(() => import("./FormulaModelEditor"));
 export function containsNonFinite(value: unknown): boolean {
   return typeof value === "number"
     ? !Number.isFinite(value)
@@ -95,6 +103,7 @@ export default function ParameterEditor({
   const patch = (value: Partial<FilterConfig>) =>
     onChange({ ...filter, ...value });
   const n = filter.x0.length;
+  const formula = readFormulaSpec(filter);
   return (
     <div className="parameters">
       <details>
@@ -116,7 +125,9 @@ export default function ParameterEditor({
           </div>
         )}
         <p className="help">
-          Q 使用连续白加速度强度；模型按实际 Δt 构造离散协方差。
+          {filter.model.kind === "builtin"
+            ? "内置 Q 使用连续白加速度强度，按实际 Δt 构造离散协方差。"
+            : "Q 是实际预测间隔内的过程协方差；倍率作用于模型返回的矩阵。"}
         </p>
         {filter.model.kind === "builtin" && filter.kind !== "imm" && (
           <div className="field-grid">
@@ -154,8 +165,9 @@ export default function ParameterEditor({
         )}
         {filter.model.kind === "custom" && (
           <p className="help">
-            Q(dt) / R(frame) 和完整矩阵在 Python
-            源码中定义，倍率作用于各自返回的协方差。
+            {formula
+              ? "完整 Q / R 在下方模型表单的矩阵中修改，无需编辑代码。"
+              : "Q(dt) / R(frame) 和完整矩阵在 Python 源码中定义，倍率作用于各自返回的协方差。"}
           </p>
         )}
       </details>
@@ -164,7 +176,9 @@ export default function ParameterEditor({
           初始状态 x₀ / P₀ <small>{n} 维</small>
         </summary>
         <p className="help">
-          内置顺序：[cx,cy,zA,vx,vy,vz,θ,ω,rA,rB,dh]。x₀ 不读取隐藏真值。
+          {formula
+            ? "表单模型的初值和初始方差在下方状态表中修改；这里可检查或调整完整 P₀。"
+            : "内置顺序：[cx,cy,zA,vx,vy,vz,θ,ω,rA,rB,dh]。x₀ 不读取隐藏真值。"}
         </p>
         <JsonField
           label="初始状态 x₀（JSON）"
@@ -212,24 +226,55 @@ export default function ParameterEditor({
         <IMMEditor filter={filter} geometry={geometry} onChange={onChange} />
       )}
       <details>
-        <summary>预测模型与 Python 方程</summary>
+        <summary>预测模型与方程</summary>
         <Field label="模型来源">
           <select
-            value={filter.model.kind}
-            onChange={(e) =>
-              patch({
-                model: {
-                  ...filter.model,
-                  kind: e.target.value as typeof filter.model.kind,
-                },
-              })
-            }
+            value={formula ? "formula" : filter.model.kind}
+            onChange={(e) => {
+              if (e.target.value === "formula") {
+                onChange(
+                  applyFormulaSpec(
+                    filter,
+                    recoverFormulaSpec(filter) ??
+                      createFormulaPreset("armor", geometry),
+                  ),
+                );
+              } else if (e.target.value === "builtin" && formula) {
+                const next = applyFormulaSpec(
+                  filter,
+                  createFormulaPreset("armor", geometry),
+                );
+                onChange({
+                  ...next,
+                  model: { kind: "builtin", builtin_name: "rm_cv", params: {} },
+                });
+              } else {
+                patch({
+                  model: {
+                    ...filter.model,
+                    kind: e.target.value as "builtin" | "custom",
+                    source: formula
+                      ? `${ADVANCED_FORMULA_PREFIX}${filter.model.source}`
+                      : filter.model.source,
+                  },
+                });
+              }
+            }}
           >
             <option value="builtin">内置四板 CV 模型</option>
-            <option value="custom">自定义 Python 模型</option>
+            <option value="formula">表单配置模型（无需 Python）</option>
+            <option value="custom">自定义 Python 模型（高级）</option>
           </select>
         </Field>
-        {filter.model.kind === "custom" ? (
+        {formula ? (
+          <Suspense fallback={<p>正在加载模型表单…</p>}>
+            <FormulaModelEditor
+              filter={filter}
+              geometry={geometry}
+              onChange={onChange}
+            />
+          </Suspense>
+        ) : filter.model.kind === "custom" ? (
           <Suspense fallback={<p>正在加载模型编辑器…</p>}>
             <ModelEditor
               filter={filter}

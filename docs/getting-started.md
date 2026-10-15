@@ -127,4 +127,6 @@ npm --prefix web approve-scripts --allow-scripts-pending
 
 自定义状态、观测、Q/R 和 f/F、h/H 的详细修改步骤及四维 / 六维示例见 [自定义模型说明](model-authoring.md)。本地数据默认写入项目 `data/` 并被 Git 忽略；新运行使用独立 UUID，取消或超时会保留具体状态。
 
+无需阅读代码的模型修改入口为“预测模型与方程” → “表单配置模型（无需 Python）”。从 [表单操作说明](model-form.md) 开始，无需找到或修改 `build_model`。
+
 普通仿真限时默认 120 秒；扫描和 Monte Carlo 按实际候选/种子数量扩大总预算（扫描含基线），界面仍可取消并查看进度。默认 IMM 扫描 5 个候选可能需数分钟；批量试验不会在 120 秒时误终止整个比较。

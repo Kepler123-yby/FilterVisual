@@ -1,0 +1,138 @@
+.formula-model-editor {
+  min-width: 0;
+}
+.formula-model-editor > button {
+  margin: 4px 0 8px;
+}
+.formula-model-editor .formula-section,
+.formula-model-editor .formula-help {
+  margin: 12px 0;
+}
+.formula-model-editor .formula-help {
+  padding: 9px;
+  border: 1px solid var(--border, #d7e0e7);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.formula-model-editor .formula-help p {
+  overflow-wrap: anywhere;
+}
+.formula-model-editor .formula-note {
+  padding: 9px;
+  border-left: 3px solid #bc852c;
+  background: #f6efdf;
+  color: #684c21;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.formula-model-editor .formula-states {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.formula-model-editor .formula-state {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border, #d7e0e7);
+  border-radius: 6px;
+}
+.formula-model-editor .formula-state-toolbar,
+.formula-model-editor .formula-state > details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.formula-model-editor .formula-state-toolbar {
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+.formula-model-editor .formula-state-toolbar > div {
+  display: flex;
+  gap: 4px;
+}
+.formula-model-editor .formula-state-toolbar button {
+  min-width: 28px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+.formula-model-editor .formula-state > details > summary {
+  cursor: pointer;
+  padding: 3px 0;
+}
+.formula-model-editor .formula-state > details > summary strong {
+  overflow-wrap: anywhere;
+}
+.formula-model-editor .formula-state > details > summary span {
+  color: #64748b;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.formula-model-editor .formula-state-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 8px;
+  padding-top: 6px;
+}
+.formula-model-editor .formula-state-fields .field {
+  min-width: 0;
+}
+.formula-model-editor .formula-wide,
+.formula-model-editor .formula-checkbox {
+  grid-column: 1 / -1;
+}
+.formula-model-editor .formula-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin: 5px 0;
+}
+.formula-model-editor .formula-checkbox input {
+  width: auto;
+  margin: 0;
+}
+.formula-model-editor textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+.formula-model-editor .formula-matrix-scroll {
+  max-width: 100%;
+  overflow: auto;
+  margin: 8px 0;
+}
+.formula-model-editor .formula-matrix {
+  border-collapse: separate;
+  border-spacing: 3px;
+  width: max-content;
+  font-size: 11px;
+}
+.formula-model-editor .formula-matrix caption {
+  text-align: left;
+  padding: 5px 3px;
+}
+.formula-model-editor .formula-matrix th {
+  min-width: 45px;
+  max-width: 105px;
+  overflow-wrap: anywhere;
+  padding: 4px;
+}
+.formula-model-editor .formula-matrix th[scope="row"] {
+  position: sticky;
+  left: 0;
+  background: var(--surface, #fff);
+  z-index: 1;
+}
+.formula-model-editor .formula-matrix input {
+  width: 106px;
+  min-width: 106px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 6px;
+}
+.formula-model-editor .field-error ul {
+  padding-left: 18px;
+}
