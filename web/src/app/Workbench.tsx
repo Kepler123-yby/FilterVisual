@@ -19,6 +19,7 @@ import TuningPanel, { mergePatch } from "../evaluation/TuningPanel";
 import { COLORS, Field, Panel, Section, Toggle } from "./components";
 import { Plot } from "../plots/Plot";
 import { fromWireConfig, toWireConfig } from "../api/adapter";
+import Sidebar from "./Sidebar";
 export default function Workbench() {
   const store = useExperimentStore(),
     [wrapped, setWrapped] = useState(false),
@@ -160,7 +161,7 @@ export default function Workbench() {
         )}
         {draft ? (
           <div className="workbench-grid">
-            <aside className="scene-sidebar">
+            <Sidebar className="scene-sidebar">
               <Panel
                 title="运动场景"
                 extra={<span className="sidebar-subtitle">真值与观测</span>}
@@ -181,7 +182,7 @@ export default function Workbench() {
                   onSelect={(id) => void store.selectRun(id)}
                 />
               </Panel>
-            </aside>
+            </Sidebar>
             <div className="center-column">
               <Panel
                 title="四装甲板运动"
@@ -397,7 +398,7 @@ export default function Workbench() {
                 />
               </Panel>
             </div>
-            <aside className="filter-sidebar">
+            <Sidebar className="filter-sidebar">
               <Panel
                 title="滤波器比较"
                 extra={
@@ -433,7 +434,7 @@ export default function Workbench() {
                   </div>
                 )}
               </Panel>
-            </aside>
+            </Sidebar>
           </div>
         ) : (
           <div className="loading-workbench">

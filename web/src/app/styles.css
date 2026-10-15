@@ -310,7 +310,9 @@ main {
 .filter-sidebar {
   position: sticky;
   top: 15px;
-  max-height: calc(100vh - 30px);
+  /* Account for the sidebar's current top before it reaches its sticky offset. */
+  max-height: var(--sidebar-max-height, calc(100dvh - 30px));
+  min-width: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #c6d3e0 transparent;

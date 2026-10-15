@@ -82,6 +82,7 @@ export default function ModelEditor({
             fontSize: 12,
             wordWrap: "on",
             scrollBeyondLastLine: false,
+            scrollbar: { alwaysConsumeMouseWheel: false },
             automaticLayout: true,
             tabSize: 4,
             autoIndent: "none",
