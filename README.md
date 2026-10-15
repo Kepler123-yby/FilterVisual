@@ -4,7 +4,7 @@
 
 ## 安装和启动
 
-需要 Python 3.10–3.13（推荐 3.13）和 Node.js 22。当前锁定的 NumPy / SciPy 不支持 Python 3.14。所有数值计算在本机执行。
+需要 Python 3.10–3.13（推荐 3.13）和 Node.js 22.12+（推荐 22 LTS）。当前锁定的 NumPy / SciPy 不支持 Python 3.14。所有数值计算在本机执行。
 
 ```bash
 python3.13 -m venv .venv

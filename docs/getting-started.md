@@ -73,12 +73,35 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=backend/src .venv/bin/python -m pyte
 
 `--only-binary=:all:` 要求使用预编译包，避免意外进入本地源码编译。如果仍出现 `No matching distribution found`，请检查 Python 版本、CPU 架构以及当前软件源是否提供对应的 wheel；该报错与网络连接失败需要分别处理。
 
-确认依赖正常后，准备 Node.js 22 并启动：
+确认依赖正常后，准备 Node.js 22 LTS（至少 22.12）并启动：
 
 ```bash
 npm --prefix web ci
 bash scripts/dev.sh
 ```
+
+## npm 安装提示和依赖审计
+
+`added ... packages` 表示安装完成。`funding` 和 npm 新版本通知无需额外处理；修复项目依赖不需要升级全局 npm。
+
+前端锁定文件已更新 Vite、Vitest、Playwright 和 jsdom，修复已报告的 6 项漏洞，并移除 jsdom 间接依赖的 `whatwg-encoding` 弃用提示。更新代码后，在项目根目录按锁定文件重新安装、审计并验证：
+
+```bash
+npm --prefix web ci
+npm --prefix web audit
+npm --prefix web test -- --run
+npm --prefix web run build
+```
+
+审计结果随漏洞数据库更新而变化，出现新问题时应检查依赖链并升级到兼容的修复版本；不要直接用 `npm audit fix --force` 覆盖项目的精确版本约束。
+
+`allow-scripts` 提示来自 npm 的安装脚本策略。项目在 `web/package.json` 中允许已检查的 `esbuild@0.28.2` 安装脚本，用于准备平台对应的构建程序；禁止可选的 `fsevents` 安装脚本，macOS 使用包内预编译文件，Linux 不需要该包。无需批准全部脚本，也无需手动编译 `fsevents`。使用支持该命令的 npm 时，可查看是否仍有待审查项：
+
+```bash
+npm --prefix web approve-scripts --allow-scripts-pending
+```
+
+脚本策略见 [npm 官方说明](https://docs.npmjs.com/cli/v11/commands/npm-approve-scripts/)。构建时若提示部分文件大于 500 kB，这是 Monaco / Plotly 体积提示；以构建退出状态判断是否成功。
 
 ## 使用流程
 
