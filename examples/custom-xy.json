@@ -108,13 +108,13 @@
       "imm": {
         "models": [
           {
-            "model_id": "rm-cv",
+            "model_id": "xy",
             "kind": "ekf",
             "q_scale": 0.2,
             "r_scale": 1.0
           },
           {
-            "model_id": "rm-cv",
+            "model_id": "xy",
             "kind": "ekf",
             "q_scale": 4.0,
             "r_scale": 1.0
@@ -185,13 +185,13 @@
       "imm": {
         "models": [
           {
-            "model_id": "rm-cv",
+            "model_id": "xy",
             "kind": "ekf",
             "q_scale": 0.2,
             "r_scale": 1.0
           },
           {
-            "model_id": "rm-cv",
+            "model_id": "xy",
             "kind": "ekf",
             "q_scale": 4.0,
             "r_scale": 1.0

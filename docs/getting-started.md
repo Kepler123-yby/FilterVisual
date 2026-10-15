@@ -125,6 +125,6 @@ npm --prefix web approve-scripts --allow-scripts-pending
 
 首版已知板 ID，不包含相机检测、PnP 和板 ID 数据关联。NIS/NEES 的时间样本相关，单条时间曲线只作描述性一致性诊断。非线性 EKF/UKF 与 IMM 的卡方界是近似参考；IMM 尤其不能把参考区间当作严格的通过率认证。只在同一物理量、相同有效时间集合上比较误差。
 
-自定义模型见 [model-authoring.md](model-authoring.md)。本地数据默认写入项目 `data/` 并被 Git 忽略；新运行使用独立 UUID，取消或超时会保留具体状态。
+自定义状态、观测、Q/R 和 f/F、h/H 的详细修改步骤及四维 / 六维示例见 [自定义模型说明](model-authoring.md)。本地数据默认写入项目 `data/` 并被 Git 忽略；新运行使用独立 UUID，取消或超时会保留具体状态。
 
 普通仿真限时默认 120 秒；扫描和 Monte Carlo 按实际候选/种子数量扩大总预算（扫描含基线），界面仍可取消并查看进度。默认 IMM 扫描 5 个候选可能需数分钟；批量试验不会在 120 秒时误终止整个比较。

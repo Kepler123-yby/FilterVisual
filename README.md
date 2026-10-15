@@ -53,4 +53,6 @@ npm --prefix web run test:e2e
 
 详见 [使用说明](docs/getting-started.md)、[模型接口](docs/model-authoring.md)、[验收记录](docs/acceptance.md)、[设计](docs/superpowers/specs/2026-10-15-filtervisual-design.md) 和 [实施计划](docs/superpowers/plans/2026-10-15-filtervisual-implementation.md)。
 
+修改状态向量、观测、Q/R、f/F、h/H 的操作和矩阵示例见 [自定义模型详解](docs/model-authoring.md)。可直接导入 [四维中心 CV](examples/custom-xy.json) 或 [六维测量偏置示例](examples/custom-xy-bias.json)，再按说明逐项修改。
+
 首版使用已知板 ID 的合成 XYZ/yaw 观测，不包含相机检测/PnP/ROS。自定义 Python 源码在限时子进程中运行，但不是权限沙箱。NIS/NEES 的卡方界是统计参考，IMM 标为高斯混合近似；时间序列的相关样本不作为独立试验通过率。

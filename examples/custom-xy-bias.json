@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "name": "自定义六维中心与测量偏置（无自旋）",
+  "seed": 42,
+  "scene": {
+    "duration_s": 4.0,
+    "simulation_dt": 0.002,
+    "geometry": {
+      "radius_a": 0.25,
+      "radius_b": 0.35,
+      "height_a": 0.2,
+      "height_diff": 0.08,
+      "reference_id": 0
+    },
+    "translation": {
+      "mode": "constant",
+      "initial_xy": [
+        0.0,
+        0.0
+      ],
+      "velocity_xy": [
+        0.5,
+        0.0
+      ],
+      "speed_min": 0.5,
+      "speed_max": 2.0,
+      "node_interval_s": 1.0,
+      "waypoints": []
+    },
+    "rotation": {
+      "mode": "angular_velocity",
+      "initial_yaw": 0.0,
+      "terms": []
+    }
+  },
+  "observation": {
+    "frequency_hz": 100.0,
+    "mode": "nearest_visible",
+    "plate_id": 0,
+    "viewpoint_xyz": [
+      -3.0,
+      0.0,
+      0.2
+    ],
+    "std_xyz": 0.01,
+    "std_yaw": 0.02,
+    "covariance": [
+      [
+        0.0001,
+        6e-05,
+        0,
+        0
+      ],
+      [
+        6e-05,
+        0.0001,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0.0001,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0.0004
+      ]
+    ],
+    "dropout_probability": 0.0,
+    "outlier_probability": 0.0,
+    "outlier_scale": 10.0
+  },
+  "models": [
+    {
+      "id": "xy-bias",
+      "kind": "python",
+      "builtin_name": null,
+      "source": "\"\"\"Six-state XY example with slowly varying measurement biases.\n\nState order: [cx, cy, vx, vy, bx, by]. Geometry and reference yaw are known\nconstants, so this example requires fixed orientation and constant XY velocity.\nEach visible plate still provides the application's [x, y, z, yaw] observation.\n\n``q_accel`` and ``q_bias`` are continuous-time noise intensities, not standard\ndeviations. ``position_std`` (m), ``yaw_std`` (rad), and ``xy_correlation``\ndescribe the filter's measurement covariance, not the simulator's noise source.\nUse ``xy_correlation=0`` for diagonal R; a nonzero value correlates a plate's\nx/y errors within one frame. Different plates remain independent in this R.\n\nThe measurements contain cx + bx and cy + by: a constant center offset cannot\nbe distinguished from an opposite bias offset from these observations alone.\nAn initial bias prior or independent calibration must anchor that ambiguity.\nThe built-in simulator has no latent bx/by truth, so truth_mapping deliberately\nincludes only center and velocity, and this model does not synthesize biases.\n\nTo run, load this file as a Python model and set each instance's x0 to six\nvalues and p0 to a positive-definite 6x6 matrix; see the custom-model guide.\n\"\"\"\nfrom __future__ import annotations\n\nimport numpy as np\n\nfrom filtervisual.core.types import PhysicalEstimate, TruthMapping\nfrom filtervisual.models.protocol import AngularModel\n\n\nclass XYBiasModel(AngularModel):\n    state_names = (\"cx\", \"cy\", \"vx\", \"vy\", \"bx\", \"by\")\n    units = (\"m\", \"m\", \"m/s\", \"m/s\", \"m\", \"m\")\n    angular_indices = ()\n\n    def __init__(self, geometry, q_accel=0.2, q_bias=1e-6,\n                 position_std=0.01, yaw_std=0.02, xy_correlation=0.0,\n                 reference_yaw=0.0):\n        parameters = np.asarray(\n            [q_accel, q_bias, position_std, yaw_std, xy_correlation, reference_yaw],\n            dtype=float,\n        )\n        if parameters.shape != (6,) or not np.isfinite(parameters).all():\n            raise ValueError(\"model parameters must be finite scalars\")\n        if (parameters[:2] < 0).any():\n            raise ValueError(\"q_accel and q_bias must be nonnegative\")\n        if (parameters[2:4] <= 0).any():\n            raise ValueError(\"position_std and yaw_std must be positive\")\n        if abs(parameters[4]) >= 1:\n            raise ValueError(\"xy_correlation must be strictly between -1 and 1\")\n        (self.q_accel, self.q_bias, self.position_std, self.yaw_std,\n         self.xy_correlation, self.reference_yaw) = parameters\n        self.geometry = geometry.model_copy(deep=True)\n\n    def f(self, x, dt, t0):\n        \"\"\"Predict position; velocity and bias retain their current means.\"\"\"\n        result = np.asarray(x, dtype=float).copy()\n        result[0] += result[2] * dt\n        result[1] += result[3] * dt\n        # Random bias drift is represented by Q, not by a deterministic offset.\n        return result\n\n    def jacobian_f(self, x, dt, t0):\n        \"\"\"F = df/dx in exactly the order declared by state_names.\"\"\"\n        F = np.eye(6)\n        F[0, 2] = dt\n        F[1, 3] = dt\n        return F\n\n    def Q(self, dt):\n        \"\"\"Integrate white acceleration and independent bias random walks.\"\"\"\n        if not np.isfinite(dt) or dt < 0:\n            raise ValueError(\"Q dt must be finite and nonnegative\")\n        covariance = np.zeros((6, 6))\n        # Per-axis [position, velocity] covariance. q_accel has units m^2/s^3.\n        acceleration_block = self.q_accel * np.array([\n            [dt ** 3 / 3.0, dt ** 2 / 2.0],\n            [dt ** 2 / 2.0, dt],\n        ])\n        covariance[np.ix_([0, 2], [0, 2])] = acceleration_block\n        covariance[np.ix_([1, 3], [1, 3])] = acceleration_block\n        # q_bias has units m^2/s. At dt=0 all process covariance is zero.\n        covariance[4, 4] = self.q_bias * dt\n        covariance[5, 5] = self.q_bias * dt\n        return covariance\n\n    @staticmethod\n    def _plate_ids(context):\n        ids = tuple(context.plate_ids)\n        if not ids or len(set(ids)) != len(ids) or any(i not in range(4) for i in ids):\n            raise ValueError(\"observation plate IDs must be unique values in 0..3\")\n        return ids\n\n    def h(self, x, context):\n        \"\"\"Map state to each requested plate's [x, y, z, yaw], in ID order.\"\"\"\n        values = []\n        geometry = self.geometry\n        for plate in self._plate_ids(context):\n            yaw = self.reference_yaw + (plate - geometry.reference_id) * np.pi / 2.0\n            radius = geometry.radius_b if plate % 2 else geometry.radius_a\n            height = geometry.height_a + (geometry.height_diff if plate % 2 else 0.0)\n            values.extend([\n                x[0] + radius * np.cos(yaw) + x[4],\n                x[1] + radius * np.sin(yaw) + x[5],\n                height,\n                yaw,\n            ])\n        return np.asarray(values, dtype=float)\n\n    def jacobian_h(self, x, context):\n        \"\"\"H has 4 rows per plate and 6 columns for this model's states.\"\"\"\n        ids = self._plate_ids(context)\n        H = np.zeros((4 * len(ids), 6))\n        for index in range(len(ids)):\n            H[4 * index, 0] = 1.0       # d plate_x / d cx\n            H[4 * index, 4] = 1.0       # d plate_x / d bx\n            H[4 * index + 1, 1] = 1.0   # d plate_y / d cy\n            H[4 * index + 1, 5] = 1.0   # d plate_y / d by\n            # z/yaw are known constants, so their state derivatives are zero.\n        return H\n\n    def R(self, frame):\n        \"\"\"Build one [x, y, z, yaw] covariance block per observed plate.\"\"\"\n        count = len(self._plate_ids(frame.context))\n        position_variance = self.position_std ** 2\n        block = np.diag([\n            position_variance, position_variance, position_variance,\n            self.yaw_std ** 2,\n        ])\n        block[0, 1] = block[1, 0] = self.xy_correlation * position_variance\n        return np.kron(np.eye(count), block)\n\n    def project(self, x, P):\n        \"\"\"Expose only the center and velocity that this reduced state holds.\"\"\"\n        return PhysicalEstimate(\n            center_xy=np.asarray(x[:2]).copy(),\n            velocity_xyz=np.r_[x[2:4], 0.0],\n            covariance={\"center_xy\": np.asarray(P[:2, :2]).copy()},\n        )\n\n    def truth_mapping(self, physical):\n        # Do not invent truth values for latent biases absent from the simulator.\n        return TruthMapping(\n            indices=(0, 1, 2, 3),\n            values=np.r_[physical.center_xy, physical.velocity_xyz[:2]],\n        )\n\n\ndef build_model(params, geometry):\n    return XYBiasModel(geometry, **params)\n",
+      "params": {
+        "q_accel": 0.2,
+        "q_bias": 1e-06,
+        "position_std": 0.01,
+        "yaw_std": 0.02,
+        "xy_correlation": 0.6,
+        "reference_yaw": 0.0
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "ekf-01",
+      "name": "EKF 01",
+      "kind": "ekf",
+      "enabled": true,
+      "model_id": "xy-bias",
+      "frequency_hz": 50.0,
+      "x0": [
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "p0": [
+        [
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0001,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0001
+        ]
+      ],
+      "q_scale": 1.0,
+      "r_scale": 1.0,
+      "ukf": {
+        "alpha": 0.5,
+        "beta": 2.0,
+        "kappa": 0.0
+      },
+      "imm": {
+        "models": [
+          {
+            "model_id": "xy-bias",
+            "kind": "ekf",
+            "q_scale": 0.2,
+            "r_scale": 1.0
+          },
+          {
+            "model_id": "xy-bias",
+            "kind": "ekf",
+            "q_scale": 4.0,
+            "r_scale": 1.0
+          }
+        ],
+        "probabilities": [
+          0.5,
+          0.5
+        ],
+        "generator": [
+          [
+            -1.0,
+            1.0
+          ],
+          [
+            1.0,
+            -1.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "ukf-01",
+      "name": "UKF 01",
+      "kind": "ukf",
+      "enabled": true,
+      "model_id": "xy-bias",
+      "frequency_hz": 50.0,
+      "x0": [
+        0.0,
+        0.0,
+        0.5,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "p0": [
+        [
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.04,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0001,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0001
+        ]
+      ],
+      "q_scale": 1.0,
+      "r_scale": 1.0,
+      "ukf": {
+        "alpha": 0.5,
+        "beta": 2.0,
+        "kappa": 0.0
+      },
+      "imm": {
+        "models": [
+          {
+            "model_id": "xy-bias",
+            "kind": "ekf",
+            "q_scale": 0.2,
+            "r_scale": 1.0
+          },
+          {
+            "model_id": "xy-bias",
+            "kind": "ekf",
+            "q_scale": 4.0,
+            "r_scale": 1.0
+          }
+        ],
+        "probabilities": [
+          0.5,
+          0.5
+        ],
+        "generator": [
+          [
+            -1.0,
+            1.0
+          ],
+          [
+            1.0,
+            -1.0
+          ]
+        ]
+      }
+    }
+  ],
+  "forecast": {
+    "enabled": true,
+    "leads_s": [
+      0.1,
+      0.3,
+      0.5
+    ],
+    "max_step_s": 0.005
+  },
+  "evaluation": {
+    "frequency_hz": 50.0,
+    "confidence": 0.95,
+    "monte_carlo_trials": 20
+  }
+}
