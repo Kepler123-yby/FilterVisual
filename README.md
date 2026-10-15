@@ -4,15 +4,17 @@
 
 ## 安装和启动
 
-需要 Python 3.10+ 和 Node.js 22。所有数值计算在本机执行。
+需要 Python 3.10–3.13（推荐 3.13）和 Node.js 22。当前锁定的 NumPy / SciPy 不支持 Python 3.14。所有数值计算在本机执行。
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.lock
+python3.13 -m venv .venv
+.venv/bin/python -m pip install --only-binary=:all: -r backend/requirements.lock
 .venv/bin/python -m pip install --no-deps -e backend
 npm --prefix web ci
 bash scripts/dev.sh
 ```
+
+首次安装 Python 或遇到 SciPy `metadata-generation-failed` 时，请按 [macOS / Linux 安装修复步骤](docs/getting-started.md#安装依赖失败的修复步骤) 选择对应系统的命令，备份旧环境后重新创建 `.venv`。升级 pip 不会解决 Python 与锁定依赖的版本兼容问题。
 
 打开 `http://127.0.0.1:5173`。启动脚本退出时清理其后端和前端进程。端口可设置 `FILTERVISUAL_API_PORT` / `FILTERVISUAL_WEB_PORT`。
 

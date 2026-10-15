@@ -1,4 +1,6 @@
 .venv/
+.venv-backup/
+.python-runtime/
 .superpowers/
 __pycache__/
 *.py[cod]

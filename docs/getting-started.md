@@ -2,6 +2,86 @@
 
 安装命令见 README。开发模式执行 `bash scripts/dev.sh`，打开 `http://127.0.0.1:5173`。生产模式先 `npm --prefix web run build`，再启动后端，直接访问 `http://127.0.0.1:8000`。
 
+## 安装依赖失败的修复步骤
+
+当前项目需要 Python 3.10–3.13，推荐 3.13。锁定的 NumPy 2.2.6 和 SciPy 1.15.3 不支持 Python 3.14；在 3.14 下，pip 可能尝试从源码构建并出现 `metadata-generation-failed`。末尾的 pip 升级提示不是该问题的原因。版本及安装文件见 [NumPy](https://pypi.org/project/numpy/2.2.6/) 和 [SciPy](https://pypi.org/project/scipy/1.15.3/)。
+
+以下命令均在项目根目录执行。先检查失败环境实际使用的版本：
+
+```bash
+.venv/bin/python --version
+```
+
+如果已激活旧虚拟环境，先执行 `deactivate`。重建前备份旧 `.venv`（重复修复时也会保留之前的备份）：
+
+```bash
+if [ -d .venv ]; then
+  mkdir -p .venv-backup
+  mv .venv ".venv-backup/$(date +%Y%m%d-%H%M%S)"
+fi
+```
+
+备份仅供保留文件；虚拟环境移动后不应直接运行或复制其中的包。随后选择下面一种方式创建新环境。
+
+### macOS（Homebrew）
+
+安装指定版本，使用 Homebrew 的实际路径创建环境，兼容 Apple Silicon 和 Intel Mac：
+
+```bash
+brew install python@3.13
+"$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
+```
+
+参考 [Homebrew Python 3.13](https://formulae.brew.sh/formula/python@3.13)。创建后继续执行下方“安装并验证依赖”。
+
+### Linux（Ubuntu 22.04 / 24.04）
+
+这两个 Ubuntu 版本的默认 Python 分别为 3.10 / 3.12，均在项目支持范围内。安装对应的虚拟环境组件并确认实际命令使用的版本：
+
+```bash
+sudo apt update
+sudo apt install python3 python3-venv
+python3 -c 'import sys; assert (3, 10) <= sys.version_info[:2] < (3, 14), sys.version; print(sys.version)'
+python3 -m venv .venv
+```
+
+如果版本检查失败，请使用下一节的 Python 3.13 方案，然后继续“安装并验证依赖”。Ubuntu 的虚拟环境说明见 [官方 Python 文档](https://documentation.ubuntu.com/ubuntu-for-developers/tutorials/python-use/)。
+
+### Linux（其他发行版或默认 Python 为 3.14+）
+
+使用 uv 下载独立的 Python 3.13 并创建带 pip 的环境，无需替换系统 Python。需要系统已有 `curl`；若已安装 uv，可跳过前两行：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+uv python install 3.13
+uv venv --python 3.13 --seed .venv
+```
+
+参考 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/) 和 [Python 版本管理](https://docs.astral.sh/uv/guides/install-python/)。
+
+### 安装并验证依赖（macOS / Linux 共用）
+
+```bash
+.venv/bin/python --version
+.venv/bin/python -m pip install --only-binary=:all: -r backend/requirements.lock
+.venv/bin/python -m pip install --no-deps -e backend
+.venv/bin/python -m pip check
+.venv/bin/python -c 'import numpy, scipy; print("NumPy", numpy.__version__, "SciPy", scipy.__version__)'
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=backend/src .venv/bin/python -m pytest backend/tests -q
+```
+
+`--only-binary=:all:` 要求使用预编译包，避免意外进入本地源码编译。如果仍出现 `No matching distribution found`，请检查 Python 版本、CPU 架构以及当前软件源是否提供对应的 wheel；该报错与网络连接失败需要分别处理。
+
+确认依赖正常后，准备 Node.js 22 并启动：
+
+```bash
+npm --prefix web ci
+bash scripts/dev.sh
+```
+
+## 使用流程
+
 1. 在运动配置修改两组半径、A 组高度、B−A 高度差、参考板、XY 速度及正弦项。正弦频率单位为 rad/s；角度和角速度模式有不同物理含义。
 2. 观测配置决定模拟传感器的频率、噪声、丢帧和异常值。滤波器内 Q/R 决定模型的信任程度，分别编辑，避免把真实噪声当作自动标定结果。
 3. 为 EKF、UKF、IMM 设置独立更新频率、初始状态和 P₀。复制实例后可比较不同参数；IMM 转移矩阵输入每秒转移率，周期概率为 `expm(Λ Δt)`。
