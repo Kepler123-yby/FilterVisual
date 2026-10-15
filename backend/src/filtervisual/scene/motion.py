@@ -24,7 +24,11 @@ def _short_angle(angle: float) -> float:
 
 @dataclass(frozen=True)
 class VelocityProfile:
-    """Scalar speed and heading nodes joined by half-cosine transitions."""
+    """Signed speed and heading nodes joined by half-cosine transitions.
+
+    Negative speed moves opposite to the heading; interpolation through zero
+    reverses direction continuously without changing the heading convention.
+    """
 
     times: np.ndarray
     speeds: np.ndarray
@@ -117,8 +121,8 @@ def _velocity_profile(scene: SceneConfig, seed: int) -> Callable[[float], np.nda
         times = np.asarray([point.time_s for point in points], dtype=float)
         speeds = np.asarray([point.speed for point in points], dtype=float)
         headings = np.asarray([point.heading_rad for point in points], dtype=float)
-        if np.any(np.diff(times) <= 0) or np.any(speeds < 0):
-            raise ValueError("waypoints require increasing times and nonnegative speed")
+        if not all(np.isfinite(values).all() for values in (times, speeds, headings)) or np.any(np.diff(times) <= 0):
+            raise ValueError("waypoints require finite values and increasing times")
         return VelocityProfile(times, speeds, headings)
     if translation.mode != "random_smooth":
         raise ValueError(f"unknown translation mode: {translation.mode}")

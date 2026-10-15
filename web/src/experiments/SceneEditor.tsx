@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ExperimentConfig } from "../api/types";
 import { Field, NumberField, Section } from "../app/components";
 import { degreeToRadian, radianToDegree } from "./validation";
@@ -8,6 +9,8 @@ export default function SceneEditor({
   config: ExperimentConfig;
   onChange: (next: ExperimentConfig) => void;
 }) {
+  const [segmentsRevision, setSegmentsRevision] = useState(0);
+  const [termsRevision, setTermsRevision] = useState(0);
   const patch = <K extends keyof ExperimentConfig>(
     key: K,
     value: Partial<ExperimentConfig[K]>,
@@ -41,6 +44,7 @@ export default function SceneEditor({
           />
           <NumberField
             label="高度差 Δh（m）"
+            signed
             value={g.dh}
             step={0.01}
             onChange={(dh) => patch("geometry", { dh })}
@@ -82,6 +86,7 @@ export default function SceneEditor({
             <NumberField
               key={i}
               label={`初始 ${i ? "Y" : "X"}（m）`}
+              signed
               value={tr.initial_xy[i]}
               onChange={(n) =>
                 patch("translation", {
@@ -92,11 +97,12 @@ export default function SceneEditor({
           ))}
         </div>
         {tr.mode === "constant" ? (
-          <div className="field-grid">
+          <div className="field-grid" key="constant-velocity">
             {[0, 1].map((i) => (
               <NumberField
                 key={i}
                 label={`速度 v${i ? "y" : "x"}（m/s）`}
+                signed
                 value={tr.velocity_xy[i]}
                 onChange={(n) =>
                   patch("translation", {
@@ -109,13 +115,13 @@ export default function SceneEditor({
             ))}
           </div>
         ) : (
-          <div className="field-grid">
+          <div className="field-grid" key={`velocity-range-${tr.mode}`}>
             {[0, 1].map((i) => (
               <NumberField
                 key={i}
                 label={i ? "速度上限（m/s）" : "速度下限（m/s）"}
                 value={tr.speed_range[i]}
-                min={0}
+                signed
                 onChange={(n) =>
                   patch("translation", {
                     speed_range: tr.speed_range.map((v, j) =>
@@ -127,13 +133,18 @@ export default function SceneEditor({
             ))}
           </div>
         )}
+        <p className="help">
+          匀速的 vx / vy 可正可负，负值沿世界 −X / −Y 运动。
+          速度范围和节点速度为有向速度；负值表示沿当前方向反向运动，跨过 0
+          时可反向。
+        </p>
         {tr.mode === "segments" && (
           <>
             <p className="help">
               时间节点之间平滑过渡，方向为世界 +X 逆时针角。
             </p>
             {tr.segments.map((node, i) => (
-              <div className="term-row" key={i}>
+              <div className="term-row" key={`${segmentsRevision}-${i}`}>
                 <NumberField
                   label="时刻（s）"
                   value={node.t}
@@ -147,6 +158,7 @@ export default function SceneEditor({
                 />
                 <NumberField
                   label="速度（m/s）"
+                  signed
                   value={node.speed}
                   onChange={(speed) =>
                     patch("translation", {
@@ -158,6 +170,7 @@ export default function SceneEditor({
                 />
                 <NumberField
                   label="方向（°）"
+                  signed
                   value={radianToDegree(node.heading)}
                   onChange={(n) =>
                     patch("translation", {
@@ -169,11 +182,12 @@ export default function SceneEditor({
                 />
                 <button
                   aria-label={`删除节点 ${i + 1}`}
-                  onClick={() =>
+                  onClick={() => {
+                    setSegmentsRevision((revision) => revision + 1);
                     patch("translation", {
                       segments: tr.segments.filter((_, j) => i !== j),
-                    })
-                  }
+                    });
+                  }}
                 >
                   ×
                 </button>
@@ -217,6 +231,7 @@ export default function SceneEditor({
         </Field>
         <NumberField
           label={spin.mode === "angle" ? "参考角偏置（°）" : "初始参考角（°）"}
+          signed
           value={radianToDegree(spin.theta0)}
           onChange={(n) => patch("spin", { theta0: degreeToRadian(n) })}
         />
@@ -228,19 +243,19 @@ export default function SceneEditor({
           <span />
         </div>
         {spin.terms.map((term, i) => (
-          <div className="sine-row" key={i}>
+          <div className="sine-row" key={`${termsRevision}-${i}`}>
             {(["A", "frequency_rad_s", "phase_rad", "C"] as const).map(
               (key, j) => (
-                <input
+                <NumberField
                   key={key}
-                  aria-label={`正弦项 ${i + 1} ${["A", "Ω", "a", "C"][j]}`}
-                  type="number"
-                  step="any"
+                  label={`正弦项 ${i + 1} ${["A", "Ω", "a", "C"][j]}`}
+                  signed
+                  compact
                   value={term[key]}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     patch("spin", {
                       terms: spin.terms.map((v, k) =>
-                        k === i ? { ...v, [key]: Number(e.target.value) } : v,
+                        k === i ? { ...v, [key]: value } : v,
                       ),
                     })
                   }
@@ -249,14 +264,19 @@ export default function SceneEditor({
             )}
             <button
               aria-label={`删除正弦项 ${i + 1}`}
-              onClick={() =>
-                patch("spin", { terms: spin.terms.filter((_, j) => i !== j) })
-              }
+              onClick={() => {
+                setTermsRevision((revision) => revision + 1);
+                patch("spin", { terms: spin.terms.filter((_, j) => i !== j) });
+              }}
             >
               ×
             </button>
           </div>
         ))}
+        <p className="help">
+          A、Ω、a、C 均支持负值。角速度为正时逆时针、为负时顺时针（从 +Z
+          向下看）； Ω 的正负控制正弦相位推进方向。
+        </p>
         <button
           className="text-button"
           onClick={() =>

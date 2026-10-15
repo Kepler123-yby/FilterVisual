@@ -11,6 +11,11 @@ export function validateDraft(draft: ExperimentConfig): string[] {
   if (!(draft.simulation_dt > 0)) errors.push("仿真步长需要大于 0");
   if (!(draft.geometry.rA > 0 && draft.geometry.rB > 0))
     errors.push("两组装甲板半径需要大于 0");
+  if (
+    draft.translation.speed_range.some((v) => !Number.isFinite(v)) ||
+    draft.translation.speed_range[1] < draft.translation.speed_range[0]
+  )
+    errors.push("速度范围需为有限数值，速度上限须不小于下限");
   if (!draft.filters.some((f) => f.enabled !== false))
     errors.push("至少启用一个滤波器实例");
   if (

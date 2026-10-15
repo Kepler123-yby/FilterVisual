@@ -50,16 +50,20 @@ def validate_experiment(config: ExperimentConfig) -> list[ValidationIssue]:
     tr = config.scene.translation
     if len(tr.initial_xy) != 2 or len(tr.velocity_xy) != 2:
         add("scene.translation", "XY 位置与速度均须为两个分量")
-    if tr.speed_min < 0 or tr.speed_max < tr.speed_min:
-        add("scene.translation.speed_max", "速度上限须不小于非负的速度下限")
+    if not math.isfinite(tr.speed_min):
+        add("scene.translation.speed_min", "有向速度下限须为有限值")
+    if not math.isfinite(tr.speed_max) or tr.speed_max < tr.speed_min:
+        add("scene.translation.speed_max", "有向速度上限须为有限值且不小于下限")
     positive("scene.translation.node_interval_s", tr.node_interval_s)
     if tr.mode == "waypoints" and (not tr.waypoints or any(
             b.time_s <= a.time_s for a,b in zip(tr.waypoints, tr.waypoints[1:]))):
         add("scene.translation.waypoints", "速度节点须非空且按时间严格递增")
     for i, waypoint in enumerate(tr.waypoints):
-        if waypoint.speed < 0:
-            add(f"scene.translation.waypoints[{i}].speed", "节点速度须非负")
-        if waypoint.time_s < 0 or waypoint.time_s > config.scene.duration_s:
+        if not math.isfinite(waypoint.speed):
+            add(f"scene.translation.waypoints[{i}].speed", "节点有向速度须为有限值")
+        if not math.isfinite(waypoint.heading_rad):
+            add(f"scene.translation.waypoints[{i}].heading_rad", "节点方向须为有限值")
+        if not math.isfinite(waypoint.time_s) or waypoint.time_s < 0 or waypoint.time_s > config.scene.duration_s:
             add(f"scene.translation.waypoints[{i}].time_s", "节点时间须在仿真范围内")
     if len(config.scene.rotation.terms) > 32:
         add("scene.rotation.terms", "正弦项最多 32 个")

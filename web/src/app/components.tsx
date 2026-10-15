@@ -1,4 +1,12 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+const numericLiteral = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+function parseSignedNumber(raw: string): number | null {
+  const text = raw.trim();
+  if (!numericLiteral.test(text)) return null;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
 
 export function Field({
   label,
@@ -28,6 +36,8 @@ export function NumberField({
   step = "any",
   hint,
   disabled,
+  signed = false,
+  compact = false,
 }: {
   label: string;
   value: number;
@@ -37,21 +47,96 @@ export function NumberField({
   step?: number | "any";
   hint?: string;
   disabled?: boolean;
+  signed?: boolean;
+  compact?: boolean;
 }) {
-  return (
-    <Field label={label} hint={hint}>
-      <input
-        type="number"
-        aria-label={label}
-        value={Number.isFinite(value) ? value : ""}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? 0 : Number(e.target.value))
+  const [raw, setRaw] = useState(String(value));
+  const committed = useRef(value);
+  const identity = useRef(label);
+  useEffect(() => {
+    // A degree → radian → degree conversion can differ by a few ULPs.
+    // Preserve the typed literal when the parent echoes our own numeric edit.
+    const sameNumber =
+      Math.abs(committed.current - value) <=
+      8 *
+        Number.EPSILON *
+        Math.max(1, Math.abs(committed.current), Math.abs(value));
+    if (!sameNumber || identity.current !== label) {
+      committed.current = value;
+      identity.current = label;
+      setRaw(String(value));
+    }
+  }, [value, label]);
+  const parsed = parseSignedNumber(raw);
+  const error =
+    parsed === null
+      ? "请输入完整的有限数值，支持负数、小数和科学计数法"
+      : min !== undefined && parsed < min
+        ? `数值须不小于 ${min}`
+        : max !== undefined && parsed > max
+          ? `数值须不大于 ${max}`
+          : undefined;
+  const input = (
+    <input
+      type={signed ? "text" : "number"}
+      inputMode={signed ? "text" : undefined}
+      role={signed ? "spinbutton" : undefined}
+      aria-label={label}
+      aria-valuenow={signed && parsed !== null ? parsed : undefined}
+      aria-valuemin={signed ? min : undefined}
+      aria-valuemax={signed ? max : undefined}
+      aria-invalid={signed ? !!error : undefined}
+      title={signed ? error : undefined}
+      value={signed ? raw : Number.isFinite(value) ? value : ""}
+      onChange={(e) => {
+        if (!signed) {
+          onChange(e.target.value === "" ? 0 : Number(e.target.value));
+          return;
         }
-        min={min}
-        max={max}
-        step={step}
-        disabled={disabled}
-      />
+        setRaw(e.target.value);
+        const next = parseSignedNumber(e.target.value);
+        if (next !== null) {
+          committed.current = next;
+          onChange(next);
+        }
+      }}
+      onBlur={() => {
+        if (signed && parsed !== null && !error) setRaw(String(parsed));
+      }}
+      onKeyDown={(event) => {
+        if (!signed) return;
+        if (event.key === "Escape") {
+          setRaw(String(value));
+        } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+          event.preventDefault();
+          const delta =
+            (typeof step === "number" ? step : 1) *
+            (event.key === "ArrowUp" ? 1 : -1);
+          const next = Math.min(
+            max ?? Infinity,
+            Math.max(
+              min ?? -Infinity,
+              Number(((parsed ?? value) + delta).toPrecision(15)),
+            ),
+          );
+          if (Number.isFinite(next)) {
+            committed.current = next;
+            setRaw(String(next));
+            onChange(next);
+          }
+        }
+      }}
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
+    />
+  );
+  return compact ? (
+    input
+  ) : (
+    <Field label={label} hint={signed && error ? error : hint}>
+      {input}
     </Field>
   );
 }

@@ -168,10 +168,14 @@ export default function Workbench() {
               >
                 <ConfigFiles
                   config={draft}
-                  onChange={store.updateDraft}
+                  onChange={store.replaceDraft}
                   onError={store.setError}
                 />
-                <SceneEditor config={draft} onChange={store.updateDraft} />
+                <SceneEditor
+                  key={store.editorRevision}
+                  config={draft}
+                  onChange={store.updateDraft}
+                />
                 <ObservationEditor
                   config={draft}
                   onChange={store.updateDraft}

@@ -6,6 +6,7 @@ import { configFingerprint, validateDraft } from "./validation";
 const STORAGE_KEY = "filtervisual.draft.v1";
 export function useExperimentStore() {
   const [draft, setDraft] = useState<ExperimentConfig | null>(null);
+  const [editorRevision, setEditorRevision] = useState(0);
   const [result, setResult] = useState<RunPayload | null>(null);
   const [runs, setRuns] = useState<RunStatus[]>([]);
   const [status, setStatus] = useState<RunStatus | null>(null);
@@ -71,6 +72,10 @@ export function useExperimentStore() {
       ),
     [],
   );
+  const replaceDraft = useCallback((next: ExperimentConfig) => {
+    setDraft(next);
+    setEditorRevision((revision) => revision + 1);
+  }, []);
   const loadResult = useCallback(async (id: string, token: number) => {
     const payload = await api.getResult(id);
     if (generation.current !== token) return;
@@ -163,10 +168,11 @@ export function useExperimentStore() {
     }
   }, [status, refreshHistory]);
   const restoreRunConfig = useCallback(() => {
-    if (result) setDraft(structuredClone(result.config));
-  }, [result]);
+    if (result) replaceDraft(structuredClone(result.config));
+  }, [result, replaceDraft]);
   return {
     draft,
+    editorRevision,
     result,
     runs,
     status,
@@ -180,6 +186,7 @@ export function useExperimentStore() {
     connected,
     initialize,
     updateDraft,
+    replaceDraft,
     submit,
     selectRun,
     cancel,
