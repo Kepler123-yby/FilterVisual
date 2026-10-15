@@ -103,6 +103,12 @@ npm --prefix web approve-scripts --allow-scripts-pending
 
 脚本策略见 [npm 官方说明](https://docs.npmjs.com/cli/v11/commands/npm-approve-scripts/)。构建时若提示部分文件大于 500 kB，这是 Monaco / Plotly 体积提示；以构建退出状态判断是否成功。
 
+## 启动脚本的 macOS / Linux 兼容性
+
+`bash scripts/dev.sh` 兼容 macOS 自带的 Bash 3.2 和 Linux。脚本使用 `.venv` 中的 Python 标准库管理两个服务，不依赖外部 `setsid` 命令或 Bash 的 `wait -n`。
+
+如果旧版本报 `wait: -n: invalid option` 或 `setsid: command not found`，执行 `git pull` 更新项目后重新运行 `bash scripts/dev.sh`，无需额外安装 Bash 或系统工具。Ctrl+C 会停止本次启动的两个服务及其子进程；任一服务退出时也会清理另一服务，并保留退出状态。
+
 ## 使用流程
 
 1. 在运动配置修改两组半径、A 组高度、B−A 高度差、参考板、XY 速度及正弦项。正弦频率单位为 rad/s；角度和角速度模式有不同物理含义。

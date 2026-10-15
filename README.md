@@ -16,7 +16,7 @@ bash scripts/dev.sh
 
 首次安装 Python 或遇到 SciPy `metadata-generation-failed` 时，请按 [macOS / Linux 安装修复步骤](docs/getting-started.md#安装依赖失败的修复步骤) 选择对应系统的命令，备份旧环境后重新创建 `.venv`。升级 pip 不会解决 Python 与锁定依赖的版本兼容问题。
 
-打开 `http://127.0.0.1:5173`。启动脚本退出时清理其后端和前端进程。端口可设置 `FILTERVISUAL_API_PORT` / `FILTERVISUAL_WEB_PORT`。
+打开 `http://127.0.0.1:5173`。启动脚本兼容 macOS 自带 Bash 和 Linux，使用项目 Python 管理服务，无需安装 `setsid` 或升级 Bash。按 Ctrl+C 或任一服务退出时，会清理本次启动的后端和前端进程。端口可设置 `FILTERVISUAL_API_PORT` / `FILTERVISUAL_WEB_PORT`。
 
 只启动构建好的应用：
 
