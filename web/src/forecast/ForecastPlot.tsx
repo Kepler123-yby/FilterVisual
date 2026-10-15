@@ -8,7 +8,13 @@ export function forecastDifference(
   target: "center" | "armor" | "angle",
   plate = 0,
 ): number | null {
-  if (!record.truth_physical || !record.physical) return null;
+  if (
+    !record.truth_physical ||
+    !record.physical ||
+    record.truth_physical.valid === false ||
+    record.physical.valid === false
+  )
+    return null;
   if (target === "angle") {
     if (
       record.physical.reference_yaw == null ||
@@ -102,7 +108,7 @@ export default function ForecastPlot({
       else {
         const project = (f: ForecastRecord, truth = false) => {
           const p = truth ? f.truth_physical : f.physical;
-          if (!p) return null;
+          if (!p || p.valid === false) return null;
           return target === "angle"
             ? p.reference_yaw
             : target === "armor"

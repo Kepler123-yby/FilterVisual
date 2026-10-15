@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
+from filtervisual import __version__
 from filtervisual.config.schema import ExperimentConfig, GeometryConfig, ModelDefinition, default_experiment
 from filtervisual.config.validation import validate_experiment
 from filtervisual.service.jobs import JobManager, RunStatus
@@ -69,7 +70,7 @@ def create_app(data_dir: Path | str, *, timeout_s: float = 120., web_dir: Path |
         yield
         manager.close()
 
-    app = FastAPI(title="FilterVisual local experiment API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="FilterVisual local experiment API", version=__version__, lifespan=lifespan)
     app.state.store = store
     app.state.jobs = manager
     app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173",
@@ -93,7 +94,7 @@ def create_app(data_dir: Path | str, *, timeout_s: float = 120., web_dir: Path |
 
     @app.get("/api/health")
     def health() -> dict:
-        return {"status": "ok", "version": "0.1.0", "worker_count": 1, "timeout_s": manager.timeout_s,
+        return {"status": "ok", "version": __version__, "worker_count": 1, "timeout_s": manager.timeout_s,
                 "timeout_policy": "single_simulation_budget; batch_total_scales_with_trial_count"}
 
     @app.get("/api/default-config", response_model=ExperimentConfig)

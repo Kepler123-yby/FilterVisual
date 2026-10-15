@@ -1,5 +1,9 @@
 # 分阶段交付记录
 
+后续自定义模型、表单、负值运动及最终发布审阅的当前验证结果见 [1.0 发布记录](releases/1.0.md)。
+
+以下为最初 M1–M3 实施过程的历史记录。测试数字、后续阶段说明和基准反映各阶段当时状态；不作为当前版本的验收声明。当前安装、功能与限制见 [README](../README.md)、[使用说明](getting-started.md) 和 [模型表单](model-form.md)。
+
 ## M1：仿真与数值核心
 
 四装甲板固定 ID 和两组半径/高度；XY 连续平移和多正弦角度/角速度；独立随机观测源；EKF、UKF、IMM；各实例独立更新频率；每次实际校正后按提前量复制分支纯预测；真值在滤波结束后对齐评估。
@@ -28,4 +32,4 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=backend/src .venv/bin/python -m pyte
 
 真实数据实验台、自定义 Python / IMM 子模型编辑、完整矩阵、预测/一致性报告、扫描/Monte Carlo、导入导出、不可变历史与可复制候选全部完成。图表串行刷新，播放和共享游标不触发数值计算；自定义状态的真值来自显式映射，同轴只绘相同单位。
 
-最终后端 **149 tests**、前端 **21 tests**、真实 Chromium **4 E2E tests** 全通过，生产构建和实际安装通过。使用说明与真实基准见 `docs/acceptance.md`；启动命令见 README。
+当时后端 **149 tests**、前端 **21 tests**、真实 Chromium **4 E2E tests** 全通过，生产构建和实际安装通过。当时验收与真实基准见 [验收记录](acceptance.md)；当前启动命令见 [README](../README.md)。

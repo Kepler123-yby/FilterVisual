@@ -54,7 +54,9 @@ def physical_error(estimate: PhysicalEstimate, truth: Any | None) -> dict[str, A
         "center_xy", "height_a", "velocity_xyz", "reference_yaw", "angular_velocity",
         "radius_a", "radius_b", "height_diff", "armor_positions",
     ):
-        estimated = getattr(estimate, name, None)
+        # A custom projection can retain finite placeholder values outside its
+        # domain. Its validity flag applies to every projected quantity.
+        estimated = getattr(estimate, name, None) if estimate.valid else None
         actual = getattr(truth, name, None)
         if estimated is None or actual is None:
             output[name] = None
@@ -221,7 +223,7 @@ def _physical_summary(rows, time_key, key, width):
     )
 
 
-def _common_comparison(instances, key, width, lead=None):
+def compare_physical_errors(instances, key, width, lead=None):
     """Compare the intersection of real valid times, never future interpolation."""
     values = {}
     for instance in instances:
@@ -321,6 +323,7 @@ def build_report(evaluated: EvaluatedRun) -> dict[str, Any]:
             instance_id=instance["id"], name=instance["name"], kind=instance["kind"],
             status=instance["status"], error=instance.get("error"), sample_count=len(samples),
             rmse=rmse, position_rmse=center["vector_rmse"], angle_rmse=angle["vector_rmse"],
+            position_count=center["count"], angle_count=angle["count"],
             position_bias=center["bias"], max_error=center["max_error"],
             time_weighted_rmse=center["time_weighted_rmse"], evidence_interval=center["evidence_interval"],
             forecast=forecast_metrics, consistency=consistency, elapsed_s=instance["elapsed_s"],
@@ -338,7 +341,7 @@ def build_report(evaluated: EvaluatedRun) -> dict[str, Any]:
     completed_payload = [row for row in payload["instances"] if row["status"] == "completed"]
     for key, title, unit, width in (("center_xy", "中心位置", "m", 2),
                                    ("reference_yaw", "参考角", "rad", 1)):
-        comparison = _common_comparison(completed_payload, key, width)
+        comparison = compare_physical_errors(completed_payload, key, width)
         if comparison:
             report["comparisons"].append(comparison)
             report["summary"].append(
@@ -347,7 +350,7 @@ def build_report(evaluated: EvaluatedRun) -> dict[str, Any]:
             )
     leads = sorted({row["lead_s"] for item in completed for row in item["forecast"]})
     for lead in leads:
-        comparison = _common_comparison(completed_payload, "center_xy", 2, lead)
+        comparison = compare_physical_errors(completed_payload, "center_xy", 2, lead)
         if comparison:
             report["comparisons"].append(comparison)
             report["summary"].append(

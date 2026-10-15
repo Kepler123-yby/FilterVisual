@@ -15,6 +15,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
 
+from filtervisual import __version__
 from filtervisual.config.schema import ExperimentConfig
 from filtervisual.simulation.runner import config_hash
 
@@ -31,7 +32,7 @@ def _write(path: Path, value) -> None:
 
 
 def _versions() -> dict:
-    values = {"python": platform.python_version(), "filtervisual": "0.1.0"}
+    values = {"python": platform.python_version(), "filtervisual": __version__}
     for name in ("numpy", "scipy", "pydantic", "fastapi"):
         try:
             values[name] = version(name)
@@ -273,13 +274,24 @@ class RunStore:
             if stored.payload.get("type") == "noise_scan":
                 writer.writerow(["config_hash", "instance_id", "candidate", "parameter", "multiplier", "value",
                                  "metric", "unit", "metric_value", "valid_samples"])
+                # Keep the same common-window evidence used by UI and ranking.
+                comparison = stored.payload.get("common_comparison", {})
+                for score in comparison.get("scores", []):
+                    candidate_index = score["candidate_index"]
+                    label = "baseline" if candidate_index is None else f"candidate_{candidate_index}"
+                    candidate = (stored.payload["baseline"] if candidate_index is None else
+                                 stored.payload["candidates"][candidate_index])
+                    writer.writerow([stored.manifest["config_hash"], stored.payload["instance_id"], label,
+                                     stored.payload["parameter"], candidate["multiplier"], candidate["value"],
+                                     "common_position_rmse", "m", score["rmse"],
+                                     comparison["common_count"] if score["rmse"] is not None else 0])
                 for label, candidate in [("baseline", stored.payload["baseline"])] + [
                     (f"candidate_{index}", row) for index, row in enumerate(stored.payload["candidates"])]:
                     for row in candidate["report"]["instances"]:
                         for metric, unit in (("position_rmse", "m"), ("angle_rmse", "rad")):
                             writer.writerow([stored.manifest["config_hash"], row["instance_id"], label,
                                              stored.payload["parameter"], candidate["multiplier"], candidate["value"],
-                                             metric, unit, row.get(metric), row.get("sample_count")])
+                                             metric, unit, row.get(metric), row.get(metric.replace("_rmse", "_count"))])
                         for forecast in row.get("forecast", []):
                             writer.writerow([stored.manifest["config_hash"], row["instance_id"], label,
                                              stored.payload["parameter"], candidate["multiplier"], candidate["value"],

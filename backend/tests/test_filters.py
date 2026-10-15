@@ -170,3 +170,32 @@ def test_ukf_large_angle_sigma_spread_prevents_prediction_coalescing():
     filter_ = make_filter(FilterConfig(id="ukf", name="UKF", kind="ukf"), model)
     assert filter_.can_predict_exact(.1)
     assert not filter_.can_predict_exact(3.)
+
+
+@pytest.mark.parametrize("alpha,kappa", [(1e-9, 0.), (1e200, 0.), (1e-200, 0.)])
+def test_ukf_rejects_numerically_degenerate_sigma_weights(alpha, kappa):
+    from filtervisual.config.schema import UKFParameters
+    from filtervisual.filters.ukf import UnscentedKalmanFilter
+    with pytest.raises(ValueError, match="UKF.*(scale|weights)"):
+        UnscentedKalmanFilter(scalar_model(), [0.], [[1.]],
+            parameters=UKFParameters(alpha=alpha, kappa=kappa))
+
+
+def test_ukf_sigma_scale_does_not_subtract_nearly_equal_numbers():
+    from filtervisual.config.schema import UKFParameters
+    from filtervisual.filters.ukf import UnscentedKalmanFilter
+    parameters = UKFParameters(alpha=.001, kappa=.2)
+    filter_ = UnscentedKalmanFilter(scalar_model(), [0.], [[1.]], parameters=parameters)
+    assert filter_.scale == parameters.alpha ** 2 * (1 + parameters.kappa)
+    np.testing.assert_allclose(filter_.predict(.1).P, [[1.]], atol=1e-12)
+
+
+def test_ukf_small_alpha_does_not_move_a_stationary_center_far_from_origin():
+    from filtervisual.config.schema import UKFParameters
+    from filtervisual.filters.ukf import UnscentedKalmanFilter
+    x = np.array([1000., -1000., .2, 0., 0., 0., .3, 0., .25, .35, .08])
+    filter_ = UnscentedKalmanFilter(RoboMasterCVModel(GeometryConfig()), x,
+        np.eye(11) * .01, parameters=UKFParameters(alpha=.0001))
+    result = filter_.predict(0.)
+    np.testing.assert_allclose(result.x[:2], x[:2], rtol=0., atol=1e-10)
+    np.testing.assert_allclose(result.P[:2, :2], np.eye(2) * .01, atol=1e-10)

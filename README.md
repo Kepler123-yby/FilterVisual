@@ -2,6 +2,8 @@
 
 用于 RoboMaster 四装甲板目标的本地滤波实验台。配置 XY 平移、多正弦自旋、两组半径和高度，比较 EKF、UKF、IMM 的拟合、更新后纯预测、NIS/NEES 及参数候选。
 
+当前稳定版本：**1.0**（Git 标签 `1.0`，软件包版本 `1.0.0`）。本次审阅修复、完整验证和默认场景复现见 [1.0 发布记录](docs/releases/1.0.md)。
+
 ## 安装和启动
 
 需要 Python 3.10–3.13（推荐 3.13）和 Node.js 22.12+（推荐 22 LTS）。当前锁定的 NumPy / SciPy 不支持 Python 3.14。所有数值计算在本机执行。
@@ -16,7 +18,7 @@ bash scripts/dev.sh
 
 首次安装 Python 或遇到 SciPy `metadata-generation-failed` 时，请按 [macOS / Linux 安装修复步骤](docs/getting-started.md#安装依赖失败的修复步骤) 选择对应系统的命令，备份旧环境后重新创建 `.venv`。升级 pip 不会解决 Python 与锁定依赖的版本兼容问题。
 
-打开 `http://127.0.0.1:5173`。启动脚本兼容 macOS 自带 Bash 和 Linux，使用项目 Python 管理服务，无需安装 `setsid` 或升级 Bash。按 Ctrl+C 或任一服务退出时，会清理本次启动的后端和前端进程。端口可设置 `FILTERVISUAL_API_PORT` / `FILTERVISUAL_WEB_PORT`。
+打开 `http://127.0.0.1:5173`。启动脚本兼容 macOS 自带 Bash 和 Linux，使用项目 Python 管理服务，无需安装 `setsid` 或升级 Bash。按 Ctrl+C 或任一服务退出时，会清理本次启动的后端和前端进程；不会注册 systemd 服务。端口可设置 `FILTERVISUAL_API_PORT` / `FILTERVISUAL_WEB_PORT`；端口占用时会报错退出，处理步骤见 [启动和端口](docs/getting-started.md#启动和端口)。
 
 只启动构建好的应用：
 
@@ -25,17 +27,17 @@ npm --prefix web run build
 PYTHONPATH=backend/src .venv/bin/python -m uvicorn filtervisual.service.app:app --host 127.0.0.1 --port 8000
 ```
 
-打开 `http://127.0.0.1:8000`。实验默认保存到 `data/runs/`，可用 `FILTERVISUAL_DATA_DIR` 改变目录；单作业默认限时 120 秒，可用 `FILTERVISUAL_JOB_TIMEOUT` 调整。
+在项目根目录执行后，打开 `http://127.0.0.1:8000`。实验默认保存到 `data/runs/`，可用 `FILTERVISUAL_DATA_DIR` 改变数据根目录；普通仿真默认限时 120 秒，扫描 / Monte Carlo 按计算单元数量扩大总预算，可用 `FILTERVISUAL_JOB_TIMEOUT` 调整基础限时。
 
 ## 功能
 
 - 四板固定身份 A0…A3，A0/A2 与 A1/A3 分别设置半径和高度，任选参考板。
-- 连续 XY 运动和多个 `A sin(Ωt+a)+C` 项，支持角度或角速度定义。
+- 连续 XY 运动和多个 `A sin(Ωt+a)+C` 项，支持有向速度、负值参数及角度 / 角速度定义。
 - 独立观测频率、真实噪声、丢帧/异常值，与每个滤波器的更新频率和 Q/R 分开。
-- EKF、UKF、IMM 多实例叠加或并排；完整 P₀、Q/R 和自定义 Python 模型。
+- EKF、UKF、IMM 多实例叠加或并排；完整 P₀、Q/R、表单公式和自定义 Python 模型。
 - 每次实际校正后复制分支，按任意提前量纯预测，与目标时刻真值对齐比较。
 - 拟合/误差/预测差距、NIS/NEES、模式概率、证据报告、Q/R 扫描和独立种子 Monte Carlo。
-- 不可变历史结果、配置导入、JSON/CSV/NPZ/ZIP/Markdown 导出，包含源码及依赖哈希。
+- 不可变历史结果、配置导入、JSON/CSV/NPZ/ZIP/Markdown 导出；JSON 含配置 / 源码和校验清单，ZIP 保留完整运行文件。
 
 ## 验证
 
@@ -46,6 +48,8 @@ npm --prefix web run build
 # 先运行 scripts/dev.sh；首次使用 Playwright 需安装浏览器：
 npm --prefix web exec -- playwright install chromium
 npm --prefix web run test:e2e
+# 若开发实例使用其他端口，改为：
+# FILTERVISUAL_E2E_BASE_URL=http://127.0.0.1:5174 npm --prefix web run test:e2e
 .venv/bin/python scripts/benchmark.py --config examples/baseline.json --repeat 2
 ```
 

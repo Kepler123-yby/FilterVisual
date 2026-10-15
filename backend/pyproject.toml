@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "filtervisual"
-version = "0.1.0"
+version = "1.0.0"
 description = "Reproducible four-armor motion and filtering laboratory"
 requires-python = ">=3.10,<3.14"
 dependencies = ["numpy==2.2.6", "scipy==1.15.3", "fastapi==0.143.1", "pydantic==2.14.1", "uvicorn==0.54.0"]

@@ -105,6 +105,7 @@ export interface Score {
   state_names?: string[];
 }
 export interface Physical {
+  valid?: boolean;
   center_xy: number[] | null;
   armor_positions: number[][] | null;
   reference_yaw: number | null;
@@ -189,6 +190,8 @@ export interface InstanceMetrics {
   rmse: (number | null)[];
   position_rmse: number | null;
   angle_rmse: number | null;
+  position_count?: number;
+  angle_count?: number;
   forecast: {
     lead_s: number;
     position_rmse: number | null;

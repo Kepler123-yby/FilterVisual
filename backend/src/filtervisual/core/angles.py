@@ -34,8 +34,10 @@ def weighted_mean(points: np.ndarray, weights: np.ndarray,
         raise ValueError("points and weights must be finite")
     if not np.isclose(weights.sum(), 1., atol=1e-10):
         raise ValueError("mean weights must sum to one")
-    local = points.copy()
+    local = points - points[0]
     for index in angular_indices:
-        local[:, index] = points[0, index] + wrap_angle(points[:, index] - points[0, index])
+        local[:, index] = wrap_angle(local[:, index])
     # Keep the angle near its reference instead of wrapping the state history.
-    return weights @ local
+    # Accumulate offsets so negative, large UKF weights do not multiply and
+    # cancel the common state origin (which can otherwise move a static state).
+    return points[0] + weights @ local

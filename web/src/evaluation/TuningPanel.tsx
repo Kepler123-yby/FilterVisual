@@ -32,9 +32,19 @@ interface ScanCandidate {
 }
 interface ScanPayload {
   type: "noise_scan";
+  parameter: "q_scale" | "r_scale";
   baseline: ScanCandidate;
   candidates: ScanCandidate[];
   summary: string[];
+  common_comparison?: {
+    common_count: number;
+    scores: {
+      role: "baseline" | "candidate";
+      candidate_index: number | null;
+      rmse: number | null;
+      reason: string | null;
+    }[];
+  };
 }
 interface MonteCarloPayload {
   type: "monte_carlo";
@@ -129,11 +139,24 @@ export default function TuningPanel({
   function apply(c: ScanCandidate) {
     if (!result) return;
     const candidate = cloneFilter(fromWireConfig(c.config).filters[0]);
-    candidate.name = `${candidate.name.replace(" 副本", "")} ${parameter === "q_scale" ? "Q" : "R"}×${c.multiplier}`;
+    candidate.name = `${candidate.name.replace(" 副本", "")} ${scan?.parameter === "q_scale" ? "Q" : "R"}×${c.multiplier}`;
     onConfig({
       ...structuredClone(result.config),
       filters: [...structuredClone(result.config.filters), candidate],
     });
+  }
+  function positionRmse(
+    candidateIndex: number | null,
+  ): number | null | undefined {
+    if (scan?.common_comparison)
+      return scan.common_comparison.scores.find(
+        (score) => score.candidate_index === candidateIndex,
+      )?.rmse;
+    return (
+      candidateIndex === null
+        ? scan?.baseline
+        : scan?.candidates[candidateIndex]
+    )?.report.instances[0]?.position_rmse;
   }
   const mcData: Data[] = mc
     ? [
@@ -225,25 +248,29 @@ export default function TuningPanel({
       )}
       {scan && (
         <>
+          <p className="help">
+            {scan.common_comparison
+              ? `中心 RMSE 使用 ${scan.common_comparison.common_count} 个共同有效时刻；无共同样本或失败的候选留空。角度 RMSE 使用各自有效时刻，仅作独立诊断。`
+              : "历史扫描的 RMSE 使用各自有效时刻，不能据此保证公平排序。"}
+          </p>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
                   <th>候选倍率</th>
-                  <th>中心 RMSE（m）</th>
-                  <th>角度 RMSE（rad）</th>
+                  <th>
+                    {scan.common_comparison
+                      ? "共同中心 RMSE（m）"
+                      : "中心 RMSE（m）"}
+                  </th>
+                  <th>各自角度 RMSE（rad）</th>
                   <th>参数</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <th>原基线</th>
-                  <td>
-                    {formatNumber(
-                      scan.baseline.report.instances[0]?.position_rmse,
-                      4,
-                    )}
-                  </td>
+                  <td>{formatNumber(positionRmse(null), 4)}</td>
                   <td>
                     {formatNumber(
                       scan.baseline.report.instances[0]?.angle_rmse,
@@ -255,9 +282,7 @@ export default function TuningPanel({
                 {scan.candidates.map((c, i) => (
                   <tr key={i}>
                     <th>{c.multiplier}×</th>
-                    <td>
-                      {formatNumber(c.report.instances[0]?.position_rmse, 4)}
-                    </td>
+                    <td>{formatNumber(positionRmse(i), 4)}</td>
                     <td>
                       {formatNumber(c.report.instances[0]?.angle_rmse, 4)}
                     </td>

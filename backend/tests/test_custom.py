@@ -67,3 +67,21 @@ def build_model(params,geometry):
     x=np.zeros(11);x[8:10]=.2
     from filtervisual.filters.ukf import UnscentedKalmanFilter
     assert np.isclose(UnscentedKalmanFilter(model,x,np.eye(11)*.01).predict(.1).x[0],.2)
+
+
+def test_contract_rejects_inconsistent_batch_state_residual():
+    import numpy as np
+    import pytest
+    model = load_model(TEMPLATE, {}, GeometryConfig())
+    model.state_residual_batch = lambda points, mean: np.zeros_like(points)
+    with pytest.raises(ValueError, match="state_residual_batch.*state_residual"):
+        check_contract(model, GeometryConfig())
+
+
+def test_contract_rejects_malformed_batch_state_residual():
+    import numpy as np
+    import pytest
+    model = load_model(TEMPLATE, {}, GeometryConfig())
+    model.state_residual_batch = lambda points, mean: np.zeros(len(points))
+    with pytest.raises(ValueError, match="state_residual_batch"):
+        check_contract(model, GeometryConfig())

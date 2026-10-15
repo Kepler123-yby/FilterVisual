@@ -8,7 +8,41 @@ import numpy as np
 
 from filtervisual.config.schema import ExperimentConfig
 from filtervisual.core.types import RunResult, SimulationData, RunProgress, RunCancelled
-from filtervisual.evaluation.report import evaluate_run, json_safe
+from filtervisual.evaluation.report import compare_physical_errors, evaluate_run, json_safe
+
+
+def _compare_candidates(baseline, candidates):
+    """Rank common center-error samples; candidate indices survive duplicate scales."""
+    scores, participants = [], []
+    for index, row in enumerate([baseline] + candidates):
+        instance = row["payload"]["instances"][0]
+        own_score = row["report"]["instances"][0]
+        reason = ("failed" if instance["status"] != "completed" else
+                  "no_valid_samples" if own_score["position_rmse"] is None else None)
+        scores.append(dict(
+            role="baseline" if index == 0 else "candidate",
+            candidate_index=None if index == 0 else index - 1,
+            multiplier=row["multiplier"], rmse=None, reason=reason,
+        ))
+        if reason is None:
+            # Every trial uses the original instance id; temporary distinct ids
+            # prevent one multiplier from overwriting another in the comparison.
+            participants.append(dict(instance, id=str(index)))
+    comparison = compare_physical_errors(participants, "center_xy", 2)
+    if comparison:
+        for score in comparison["scores"]:
+            scores[int(score["instance_id"])]["rmse"] = score["rmse"]
+    else:
+        for score in scores:
+            if score["reason"] is None:
+                score["reason"] = "no_common_times"
+    eligible = [score for score in scores if score["role"] == "candidate" and score["rmse"] is not None]
+    best = min(eligible, key=lambda score: score["rmse"]) if eligible else None
+    return dict(
+        quantity="center_xy", common_count=comparison["common_count"] if comparison else 0,
+        evidence_interval=comparison["evidence_interval"] if comparison else None,
+        scores=scores, best_candidate_index=best["candidate_index"] if best else None,
+    )
 
 
 def scan_noise(
@@ -28,6 +62,7 @@ def scan_noise(
     baseline_value = getattr(original, parameter)
     from filtervisual.models.registry import make_model
     from filtervisual.simulation.runner import config_hash, run_instance
+    from filtervisual.simulation.scheduler import time_grid
     expected_hash = config_hash(dict(scene=config.scene.model_dump(), seed=config.seed))
     if data.scene_hash != expected_hash:
         raise ValueError("scan scene_hash differs from the baseline scene and seed; cannot reuse observations")
@@ -40,11 +75,7 @@ def scan_noise(
               for definition in config.models if definition.id in required_ids}
     if set(models) != required_ids:
         raise ValueError("scan requires all primary and IMM mode models in the model registry")
-    duration = config.scene.duration_s
-    frequency = config.evaluation.frequency_hz
-    times = np.arange(int(np.floor(duration * frequency + 1e-10)) + 1) / frequency
-    if times[-1] < duration - 1e-12:
-        times = np.r_[times, duration]
+    times = time_grid(config.scene.duration_s, config.evaluation.frequency_hz)
     results = []
     # Always include a real baseline, even if the requested list omits multiplier 1.
     total=1+len(multipliers)
@@ -71,16 +102,24 @@ def scan_noise(
         f"为 {original.name} 比较 {parameter} 的 {len(candidates)} 个倍率，"
         "所有候选复用基线的相同观测帧，原配置保持不变。"
     ]
-    eligible = [row for row in candidates if row["report"]["instances"][0]["status"] == "completed"
-                and row["report"]["instances"][0]["position_rmse"] is not None]
-    if eligible:
-        best = min(eligible, key=lambda row: row["report"]["instances"][0]["position_rmse"])
-        value = best["report"]["instances"][0]["position_rmse"]
-        summary.append(f"候选中中心位置 RMSE 最小的倍率为 {best['multiplier']:g}，误差 {value:.6g} m；其他状态和预测需分别核对。")
+    comparison = _compare_candidates(baseline, candidates)
+    best_index = comparison["best_candidate_index"]
+    if best_index is not None:
+        best = next(score for score in comparison["scores"] if score["candidate_index"] == best_index)
+        summary.append(
+            f"在可评估结果的 {comparison['common_count']} 个共同有效时刻内，"
+            f"候选中中心位置 RMSE 最小的倍率为 {best['multiplier']:g}，误差 {best['rmse']:.6g} m；"
+            "其他状态和预测需分别核对。"
+        )
+    else:
+        summary.append("没有共同有效的中心位置评估时刻，无法给出候选排序；各自窗口的指标仅用于独立诊断。")
+    excluded = sum(score["reason"] in ("failed", "no_valid_samples") for score in comparison["scores"])
+    if excluded:
+        summary.append(f"有 {excluded} 个基线或候选因失败或无有效中心位置样本未参与共同窗口比较。")
     return json_safe(dict(
         type="noise_scan", instance_id=instance_id, parameter=parameter,
         multipliers=list(multipliers), observation_hash=data.observation_hash,
-        baseline=baseline, candidates=candidates, summary=summary,
-        report=dict(summary=summary, baseline=baseline["report"],
+        baseline=baseline, candidates=candidates, summary=summary, common_comparison=comparison,
+        report=dict(summary=summary, baseline=baseline["report"], common_comparison=comparison,
                     candidates=[dict(multiplier=row["multiplier"], report=row["report"]) for row in candidates]),
     ))

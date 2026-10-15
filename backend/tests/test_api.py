@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from filtervisual.config.schema import ModelDefinition, default_experiment
+from filtervisual import __version__
 from filtervisual.service.app import create_app
 from filtervisual.service.jobs import JobManager
 from filtervisual.storage.store import RunStore
@@ -48,6 +49,8 @@ def test_invalid_run_has_actionable_field_path(tmp_path):
         assert client.get("/api/runs").json() == []
         assert client.get("/api/runs/not-a-uuid").status_code == 404
         assert client.get("/api/health").json()["worker_count"] == 1
+        assert client.get("/api/health").json()["version"] == __version__
+        assert client.get("/openapi.json").json()["info"]["version"] == __version__
         assert client.get("/api/default-config").json()["scene"]["duration_s"] == 12
 
 

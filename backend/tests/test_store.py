@@ -2,6 +2,8 @@
 from hashlib import sha256
 from io import BytesIO
 import json
+import csv
+from io import StringIO
 from uuid import uuid4
 from zipfile import ZipFile
 
@@ -9,6 +11,7 @@ import numpy as np
 import pytest
 
 from filtervisual.config.schema import default_experiment
+from filtervisual import __version__
 from filtervisual.evaluation.report import evaluate_run
 from filtervisual.simulation.runner import config_hash, run_experiment
 from filtervisual.storage.store import RunStore
@@ -44,6 +47,7 @@ def test_round_trip_sealed_hashes_and_non_pickle_npz(tmp_path):
     assert len(loaded.manifest["backend_source"]["sha256"]) == 64
     assert "storage/store.py" in loaded.manifest["backend_source"]["files"]
     assert loaded.manifest["sealed"]
+    assert loaded.manifest["versions"]["filtervisual"] == __version__
     for name, digest in loaded.manifest["files"].items():
         assert sha256((store.path(run_id) / name).read_bytes()).hexdigest() == digest
     with np.load(BytesIO(store.export(run_id, "npz")), allow_pickle=False) as arrays:
@@ -112,3 +116,35 @@ def test_tampered_and_unsealed_results_are_rejected(tmp_path):
     (path / "payload.json").write_text(json.dumps(payload))
     with pytest.raises(ValueError, match="checksum mismatch"):
         store.load(run_id)
+
+
+def test_scan_csv_preserves_common_window_evidence(tmp_path):
+    from filtervisual.simulation.runner import build_data
+    from filtervisual.tuning.scan import scan_noise
+    config = small_config()
+    data = build_data(config)
+    payload = scan_noise(config, config.instances[0].id, "q_scale", [2.], data)
+    store, run_id = RunStore(tmp_path), str(uuid4())
+    store.create(run_id, config, {"id": run_id, "created_at": "2026-10-15T00:00:00Z"}, kind="noise_scan")
+    store.save(run_id, config, payload=payload, data=data)
+    rows = list(csv.DictReader(StringIO(store.export(run_id, "csv").decode("utf-8-sig"))))
+    common = [row for row in rows if row["metric"] == "common_position_rmse"]
+    assert len(common) == 2
+    assert [row["candidate"] for row in common] == ["baseline", "candidate_0"]
+    for row, score in zip(common, payload["common_comparison"]["scores"]):
+        assert float(row["metric_value"]) == score["rmse"]
+        assert int(row["valid_samples"]) == payload["common_comparison"]["common_count"]
+
+
+def test_scan_csv_uses_metric_valid_counts_instead_of_total_grid_samples(tmp_path):
+    config = small_config()
+    store, run_id = RunStore(tmp_path), str(uuid4())
+    payload = dict(type="noise_scan", instance_id="ekf-01", parameter="q_scale", multipliers=[],
+                   report={}, candidates=[], baseline=dict(multiplier=1., value=1., report=dict(instances=[dict(
+                       instance_id="ekf-01", sample_count=100, position_rmse=None, position_count=0,
+                       angle_rmse=.1, angle_count=2,
+                   )])))
+    store.create(run_id, config, {"id": run_id, "created_at": "2026-10-15T00:00:00Z"}, kind="noise_scan")
+    store.save(run_id, config, payload=payload)
+    rows = list(csv.DictReader(StringIO(store.export(run_id, "csv").decode("utf-8-sig"))))
+    assert {row["metric"]: row["valid_samples"] for row in rows} == {"position_rmse": "0", "angle_rmse": "2"}

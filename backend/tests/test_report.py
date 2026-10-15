@@ -238,3 +238,24 @@ def test_real_monte_carlo_preserves_config_and_aggregates_seed_trials():
     assert all(row["statistic"] in ("anis", "anees") for row in out["groups"])
     assert result.config.model_dump() == before
     assert "不运行附带纯预测" in out["notes"][0]
+
+
+def test_invalid_projection_finite_values_are_not_scored_or_ranked():
+    result = fake_result(count=3)
+    result.instances[0].model.project = lambda x, P: PhysicalEstimate(
+        valid=False, error="projection outside domain", center_xy=np.array([0., 0.]),
+        reference_yaw=0.,
+    )
+    add_forecast(result, .2, .3)
+    payload = evaluate_run(result).payload
+    instance = payload["instances"][0]
+    assert instance["samples"][0]["physical"]["valid"] is False
+    assert instance["samples"][0]["physical_error"]["center_xy"] is None
+    assert instance["forecasts"][0]["physical_error"]["center_xy"] is None
+    report = payload["report"]
+    assert report["instances"][0]["position_rmse"] is None
+    assert report["instances"][0]["angle_rmse"] is None
+    assert report["instances"][0]["position_count"] == 0
+    assert report["instances"][0]["angle_count"] == 0
+    assert report["instances"][0]["forecast"][0]["count"] == 0
+    assert report["comparisons"] == []

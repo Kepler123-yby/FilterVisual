@@ -98,7 +98,7 @@ export function useExperimentStore() {
         if (s.status === "completed") await loadResult(id, token);
         else setResult(null);
       } catch (err) {
-        setError((err as Error).message);
+        if (generation.current === token) setError((err as Error).message);
       }
     },
     [loadResult],
@@ -123,7 +123,7 @@ export function useExperimentStore() {
           void refreshHistory();
         } else timer = setTimeout(() => void poll(), 700);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && token === generation.current) {
           setError((err as Error).message);
           timer = setTimeout(() => void poll(), 2500);
         }
@@ -155,16 +155,19 @@ export function useExperimentStore() {
       void refreshHistory();
       if (s.status === "completed") await loadResult(s.id, token);
     } catch (err) {
-      setError((err as Error).message);
+      if (generation.current === token) setError((err as Error).message);
     }
   }, [loadResult, refreshHistory]);
   const cancel = useCallback(async () => {
     if (!status) return;
+    const token = generation.current;
     try {
-      setStatus(await api.cancel(status.id));
+      const next = await api.cancel(status.id);
+      if (generation.current !== token) return;
+      setStatus(next);
       void refreshHistory();
     } catch (err) {
-      setError((err as Error).message);
+      if (generation.current === token) setError((err as Error).message);
     }
   }, [status, refreshHistory]);
   const restoreRunConfig = useCallback(() => {

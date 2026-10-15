@@ -68,3 +68,19 @@ def test_signed_speed_ranges_still_require_finite_ordered_limits(baseline_config
 def test_invalid_builtin_parameters_rejected(baseline_config):
     baseline_config.models[0].params={"q_translation": -1}
     assert "models[0].params" in {x.path for x in validate_experiment(baseline_config)}
+
+
+@pytest.mark.parametrize("kind", ["ukf", "imm"])
+@pytest.mark.parametrize("alpha", [1e-200, 1e200])
+def test_degenerate_ukf_weights_rejected_before_running(baseline_config, kind, alpha):
+    instance = baseline_config.instances[0]
+    instance.kind = kind
+    instance.ukf.alpha = alpha
+    if kind == "imm":
+        instance.imm.models[0].kind = "ukf"
+    assert "instances[0].ukf" in {x.path for x in validate_experiment(baseline_config)}
+
+
+def test_common_small_ukf_alpha_remains_valid(baseline_config):
+    baseline_config.instances[1].ukf.alpha = .001
+    assert validate_experiment(baseline_config) == []

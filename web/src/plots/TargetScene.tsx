@@ -26,7 +26,14 @@ export function atOrBefore<T extends { t: number }>(
 const plateColors = ["#2866ad", "#008e91", "#2866ad", "#008e91"];
 export function projectGeometry(config: ExperimentConfig): CompletePhysical {
   const g = config.geometry,
-    theta = config.spin.theta0 + (config.spin.mode === "angle" ? config.spin.terms.reduce((sum,t)=>sum+t.A*Math.sin(t.phase_rad)+t.C,0) : 0);
+    theta =
+      config.spin.theta0 +
+      (config.spin.mode === "angle"
+        ? config.spin.terms.reduce(
+            (sum, t) => sum + t.A * Math.sin(t.phase_rad) + t.C,
+            0,
+          )
+        : 0);
   return {
     center_xy: config.translation.initial_xy,
     reference_yaw: theta,
@@ -197,13 +204,21 @@ export default function TargetScene({
   const p = truth ?? projectGeometry(config);
   const instances =
     result?.instances.filter((i) => enabled.includes(i.id)) ?? [];
-  const pointPath = (points: number[][]) =>
-    points
-      .map(
-        (v, i) =>
-          `${i ? "L" : "M"}${mapX(v[0]).toFixed(1)},${mapY(v[1]).toFixed(1)}`,
-      )
-      .join(" ");
+  const pointPath = (points: (number[] | null)[]) => {
+    const commands: string[] = [];
+    let move = true;
+    for (const point of points) {
+      if (!point || !point.every(Number.isFinite)) {
+        move = true;
+        continue;
+      }
+      commands.push(
+        `${move ? "M" : "L"}${mapX(point[0]).toFixed(1)},${mapY(point[1]).toFixed(1)}`,
+      );
+      move = false;
+    }
+    return commands.join(" ");
+  };
   const history =
     result?.truth.filter((t) => t.t <= time).map((t) => t.center_xy) ?? [];
   const renderPhysical = (
@@ -212,7 +227,8 @@ export default function TargetScene({
     label: string,
     dashed = false,
   ) => {
-    if (!physical.center_xy?.every(Number.isFinite)) return null;
+    if (physical.valid === false || !physical.center_xy?.every(Number.isFinite))
+      return null;
     const center = physical.center_xy;
     return (
       <g>
@@ -328,8 +344,12 @@ export default function TargetScene({
               <path
                 d={pointPath(
                   instance.samples
-                    .filter((t) => t.t <= time && t.physical?.center_xy)
-                    .map((t) => t.physical!.center_xy!),
+                    .filter((t) => t.t <= time)
+                    .map((t) =>
+                      t.physical?.valid === false
+                        ? null
+                        : (t.physical?.center_xy ?? null),
+                    ),
                 )}
                 stroke={color}
                 strokeWidth="1.2"
@@ -340,7 +360,8 @@ export default function TargetScene({
                 renderPhysical(sample.physical, color, instance.name, true)}
               {nearestForecasts(instance, time).map(
                 (record, i) =>
-                  record.physical?.center_xy && (
+                  record.physical?.valid !== false &&
+                  record.physical?.center_xy?.every(Number.isFinite) && (
                     <g key={i} opacity=".7">
                       <circle
                         cx={mapX(record.physical.center_xy[0])}

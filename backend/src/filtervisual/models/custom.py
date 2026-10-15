@@ -105,6 +105,15 @@ def check_contract(model, geometry, x0=None, p0=None):
         if not np.allclose(actual,expected,atol=1e-10,rtol=1e-8):
             raise ValueError("f_batch 与 f 不一致")
     shaped(model.state_residual(x,x),(n,),"state_residual")
+    if callable(getattr(model,"state_residual_batch",None)):
+        probes=np.array([x,x+.001])
+        # Exercise the periodic branch too, instead of checking only zeros.
+        if angular:
+            probes[1,list(angular)]+=2*np.pi-.002
+        actual=shaped(model.state_residual_batch(probes,x),probes.shape,"state_residual_batch")
+        expected=np.array([model.state_residual(point.copy(),x) for point in probes])
+        if not np.allclose(actual,expected,atol=1e-10,rtol=1e-8):
+            raise ValueError("state_residual_batch 与 state_residual 不一致")
     shaped(model.state_mean(np.array([x,x]),np.array([.5,.5])),(n,),"state_mean")
     for dt in (0.,.01,.2):
         q = shaped(model.Q(dt),(n,n),"Q(dt)")

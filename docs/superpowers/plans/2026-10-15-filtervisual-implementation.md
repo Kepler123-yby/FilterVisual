@@ -1,5 +1,7 @@
 # FilterVisual Implementation Plan
 
+这是首轮交付的历史实施计划，保留原始任务与检查表；当前功能和验证以 [1.0 发布记录](../../releases/1.0.md) 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付可编辑 RoboMaster 四装甲板运动、比较 EKF/UKF/IMM、评估更新后未来状态预测并给出可验证调参建议的本地 app。

@@ -9,22 +9,40 @@ from filtervisual.core.types import UpdateDiagnostics
 from filtervisual.filters.protocol import GaussianFilter
 
 
+def unscented_weights(dimension, parameters):
+    """Build finite scaled-UKF weights, rejecting floating-point degeneracy.
+
+    The algebraic scale is alpha²(n+kappa). Computing n+lambda instead loses
+    significant digits for the small alpha values commonly used by the UKF.
+    This helper is also used by configuration validation before starting a run.
+    """
+    n = dimension
+    alpha, beta, kappa = parameters.alpha, parameters.beta, parameters.kappa
+    if (not isinstance(n, (int, np.integer)) or n <= 0
+            or not np.isfinite([alpha, beta, kappa]).all()
+            or alpha <= 0 or beta < 0 or n + kappa <= 0):
+        raise ValueError("UKF alpha must be positive, beta nonnegative and n+kappa positive")
+    scale = alpha * alpha * (n + kappa)
+    if not np.isfinite(scale) or scale <= 0:
+        raise ValueError("UKF parameters produce a nonfinite or zero sigma-point scale")
+    mean = np.full(2 * n + 1, .5 / scale)
+    mean[0] = 1. - n / scale
+    covariance = mean.copy()
+    covariance[0] = mean[0] + (1. - alpha * alpha + beta)
+    if (not np.isfinite(mean).all() or not np.isfinite(covariance).all()
+            or not np.isclose(mean.sum(), 1., atol=1e-10)):
+        raise ValueError("UKF parameters produce numerically degenerate sigma-point weights")
+    return scale, scale - n, mean, covariance
+
+
 class UnscentedKalmanFilter(GaussianFilter):
     kind = "ukf"
 
     def __init__(self, model, x0, P0, t0=0., q_scale=1., r_scale=1., parameters=None):
         super().__init__(model, x0, P0, t0, q_scale, r_scale)
         self.parameters = parameters or UKFParameters()
-        n = len(self.x)
-        alpha, beta, kappa = self.parameters.alpha, self.parameters.beta, self.parameters.kappa
-        if not np.isfinite([alpha, beta, kappa]).all() or alpha <= 0 or beta < 0 or n + kappa <= 0:
-            raise ValueError("UKF alpha must be positive, beta nonnegative and n+kappa positive")
-        self.lambda_ = alpha * alpha * (n + kappa) - n
-        self.scale = n + self.lambda_
-        self.mean_weights = np.full(2 * n + 1, 1. / (2. * self.scale))
-        self.covariance_weights = self.mean_weights.copy()
-        self.mean_weights[0] = self.lambda_ / self.scale
-        self.covariance_weights[0] = self.mean_weights[0] + (1. - alpha * alpha + beta)
+        self.scale, self.lambda_, self.mean_weights, self.covariance_weights = unscented_weights(
+            len(self.x), self.parameters)
 
     def _sigma_points(self):
         factor, _, jitter = cholesky_with_jitter(self.P, name="sigma P")

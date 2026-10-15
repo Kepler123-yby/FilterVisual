@@ -119,3 +119,74 @@ def test_scan_progress_and_cancellation():
     assert events[-1].completed_events==events[-1].total_events==2000
     with pytest.raises(RunCancelled):
         scan_noise(result.config,"test","q_scale",[1],build_data(result.config),cancel=lambda:True)
+
+
+def test_scan_uses_exactly_the_normal_evaluation_grid():
+    from filtervisual.simulation.runner import run_experiment
+    from filtervisual.tuning.scan import scan_noise
+
+    config = fake_result(count=3, duration=.10000000005).config
+    config.forecast.enabled = False
+    config.evaluation.frequency_hz = 10.
+    normal = run_experiment(config)
+    expected = [row.t for row in normal.instances[0].samples]
+    scanned = scan_noise(config, "test", "q_scale", [1], normal.data)
+    assert [row["t"] for row in scanned["baseline"]["payload"]["instances"][0]["samples"]] == expected
+    assert scanned["baseline"]["report"]["instances"][0]["position_rmse"] == (
+        evaluate_run(normal).payload["report"]["instances"][0]["position_rmse"]
+    )
+
+
+def test_scan_ranking_uses_common_times_and_stable_candidate_indices(monkeypatch):
+    import copy
+    import pytest
+    from filtervisual.simulation.runner import build_data
+    from filtervisual.tuning.scan import scan_noise
+
+    result = fake_result(count=3)
+    result.config.forecast.enabled = False
+    baseline = copy.deepcopy(result.instances[0])
+    first = copy.deepcopy(baseline)
+    second = copy.deepcopy(baseline)
+    for sample in baseline.samples:
+        sample.x[0] = result.data.truth.sample(sample.t).center_xy[0] + .5
+    for index, sample in enumerate(first.samples):
+        sample.x[0] = result.data.truth.sample(sample.t).center_xy[0] + (1 if index == 2 else 0)
+    second.samples = second.samples[-1:]
+    second.samples[0].x[0] = result.data.truth.sample(1.).center_xy[0] + .7
+    trials = iter([baseline, first, second])
+    monkeypatch.setattr("filtervisual.simulation.runner.run_instance", lambda *args, **kwargs: next(trials))
+    # Duplicate multipliers still refer to distinct actual trials.
+    out = scan_noise(result.config, "test", "q_scale", [1, 1], build_data(result.config))
+    comparison = out["common_comparison"]
+    assert comparison["common_count"] == 1
+    assert comparison["evidence_interval"] == [1., 1.]
+    assert comparison["best_candidate_index"] == 1
+    assert [row["candidate_index"] for row in comparison["scores"]] == [None, 0, 1]
+    assert [row["rmse"] for row in comparison["scores"]] == pytest.approx([.5, 1., .7])
+    assert out["candidates"][0]["report"]["instances"][0]["position_rmse"] < .7
+    assert out["report"]["common_comparison"] == comparison
+    assert "1 个共同有效时刻" in out["summary"][1]
+
+
+def test_scan_does_not_rank_disjoint_valid_windows(monkeypatch):
+    import copy
+    from filtervisual.simulation.runner import build_data
+    from filtervisual.tuning.scan import scan_noise
+
+    result = fake_result(count=3)
+    result.config.forecast.enabled = False
+    trials = []
+    for index in range(3):
+        run = copy.deepcopy(result.instances[0])
+        run.samples = run.samples[index:index + 1]
+        trials.append(run)
+    trial_iter = iter(trials)
+    monkeypatch.setattr("filtervisual.simulation.runner.run_instance", lambda *args, **kwargs: next(trial_iter))
+    out = scan_noise(result.config, "test", "q_scale", [.3, 3], build_data(result.config))
+    comparison = out["common_comparison"]
+    assert comparison["common_count"] == 0
+    assert comparison["evidence_interval"] is None
+    assert comparison["best_candidate_index"] is None
+    assert all(row["rmse"] is None and row["reason"] == "no_common_times" for row in comparison["scores"])
+    assert not any("最小" in line for line in out["summary"])

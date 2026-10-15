@@ -114,8 +114,12 @@ def validate_experiment(config: ExperimentConfig) -> list[ValidationIssue]:
         matrix(p+".p0",f.p0,len(f.x0))
         if f.q_scale < 0 or f.r_scale <= 0:
             add(p+".r_scale", "Q 倍率须非负，R 倍率须为正")
-        if f.ukf.alpha <= 0 or f.ukf.beta < 0 or len(f.x0)+f.ukf.kappa <= 0:
-            add(p+".ukf", "UKF 参数需满足 α>0、β≥0、n+κ>0")
+        if f.kind == "ukf" or f.kind == "imm" and any(mode.kind == "ukf" for mode in f.imm.models):
+            try:
+                from filtervisual.filters.ukf import unscented_weights
+                unscented_weights(len(f.x0), f.ukf)
+            except ValueError as error:
+                add(p+".ukf", f"UKF 参数无效：{error}")
         if f.kind == "imm":
             imm=f.imm; n=len(imm.models)
             if n<2 or n>8 or len(imm.probabilities)!=n:

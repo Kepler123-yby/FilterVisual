@@ -4,7 +4,7 @@ export default function MetricsTable({ report }: { report: Report }) {
   return (
     <div className="table-scroll">
       <p className="metrics-explanation">
-        主状态在共同评估网格统计；纯预测表格包含各实例全部有效端点，总结使用共同有效预测起点。
+        主状态在评估网格统计，各指标仅使用有真值的有效样本；纯预测表格包含各实例全部有效端点，总结使用共同有效预测起点。
       </p>
       <table>
         <thead>
@@ -14,7 +14,7 @@ export default function MetricsTable({ report }: { report: Report }) {
             <th>角度 RMSE（rad）</th>
             <th>实际更新（Hz）</th>
             <th>耗时（s）</th>
-            <th>有效样本</th>
+            <th>评估样本</th>
           </tr>
         </thead>
         <tbody>
